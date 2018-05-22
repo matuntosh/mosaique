@@ -1,31 +1,55 @@
-function MosaiqueComponent () {
+/*
+
+The MIT License (MIT)
+
+Copyright (c) Tue May 22 2018 Software Research Associates, Inc. 
+
+Permission is hereby granted, free of charge, to any person obtaining a copy of
+this software and associated documentation files (the "Software"), to deal in
+the Software without restriction, including without limitation the rights to
+use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of
+the Software, and to permit persons to whom the Software is furnished to do so,
+subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS
+FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR
+COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER
+IN AN ACTION OF CONTRACT, TORTOR OTHERWISE, ARISING FROM, OUT OF OR IN
+CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+*/
+
+function MosaiqueComponent() {
 	UIComponent.call(this);
 	this._pixelSize = null;
 	this._currentImageFile = null;
 	this._imageFileList = null;
-	
+
 	this._canvasComponents = null;
 	this._canvasForOriginal = null;
 	this._canvasForMosaique = null;
 	this._ctxForOriginal = null;
 	this._ctxForMosaique = null;
-	
+
 	this._imageBySrc = {};
 	this._loadedCount = 0;
-	
+
 	this._sortRects = null;
 	this._mosaiquePieces = null;
 	this._backgroundOfMosaique = null;
-    this._backgroundColorOfOriginal = 'white';
-    
-    this._drawWithUniquePieces = true;
-    this._cutOverflowingPieces = false;
-    this._thresholdDistance = 10000;
-    this._divides = 4;
-    this._dividesOriginal = 71;
-    
-    this._minimumDistanceComponent = null;
-    this._maximumDistanceComponent = null;
+	this._backgroundColorOfOriginal = 'white';
+
+	this._drawWithUniquePieces = true;
+	this._cutOverflowingPieces = false;
+	this._thresholdDistance = 10000;
+	this._divides = 4;
+	this._dividesOriginal = 71;
+
+	this._minimumDistanceComponent = null;
+	this._maximumDistanceComponent = null;
 }
 inherits(MosaiqueComponent, UIComponent);
 
@@ -42,7 +66,9 @@ MosaiqueComponent.prototype.loadFrom = function (originalImagePath, pieceCsvPath
 				}));
 				MediaFileLoader.instance().maxLoadingCount(1000);
 				self.loadImagesFromFiles(function () {
-					self.currentImageFile({src: originalImagePath});
+					self.currentImageFile({
+						src: originalImagePath
+					});
 					self.draw();
 					WaitComponent.close();
 				});
@@ -69,7 +95,9 @@ MosaiqueComponent.prototype.requestFiles = function () {
 			}
 		};
 		reader.onload = function () {
-			self.currentImageFile({src: originalImageSrc});
+			self.currentImageFile({
+				src: originalImageSrc
+			});
 			self._imageBySrc[originalImageSrc] = originalImage;
 			originalImage.src = reader.result;
 		};
@@ -105,7 +133,10 @@ MosaiqueComponent.prototype.pixelSize = function (size) {
 		this._pixelSize = size;
 	}
 	if (!this._pixelSize) {
-		this._pixelSize = {width: 1920, height: 1920};
+		this._pixelSize = {
+			width: 1920,
+			height: 1920
+		};
 	}
 	return this._pixelSize;
 };
@@ -133,156 +164,163 @@ MosaiqueComponent.prototype.cssClassName = function () {
 };
 MosaiqueComponent.prototype.createComponent = function () {
 	let c = UIComponent.prototype.createComponent.call(this);
-		
+
 	let canvases = [this.canvasForOriginal(), this.canvasForMosaique()];
 	this.canvasComponents().forEach(function (canvasComponent, i) {
 		canvasComponent.addCanvas(canvases[i]);
 		canvasComponent.appendTo(c);
 	});
-	
+
 	return c;
 };
 MosaiqueComponent.prototype.initializeComponent = function () {
-    UIComponent.prototype.initializeComponent.call(this);
-    window.addEventListener('keyup', function (evt) {
-        if (evt.ctrlKey && evt.key == ',') {
-            toggleSetting();
-        }
-    });
-    var settingComponent = null,
-        dividesOfOriginal = null,
-        dividesOfMatching = null,
-        drawWithUniquePiecesSwitch = null,
-        findingOrderSwitch = null,
-        backgroundColorOriginalCanvasSwitch = null,
-        backgroundOfMosaiqueSwitch = null,
-        cutOverflowingPiecesSwitch = null,
-        thresholdDistanceInput = null,
-        self = this;
+	UIComponent.prototype.initializeComponent.call(this);
+	window.addEventListener('keyup', function (evt) {
+		if (evt.ctrlKey && evt.key == ',') {
+			toggleSetting();
+		}
+	});
+	var settingComponent = null,
+		dividesOfOriginal = null,
+		dividesOfMatching = null,
+		drawWithUniquePiecesSwitch = null,
+		findingOrderSwitch = null,
+		backgroundColorOriginalCanvasSwitch = null,
+		backgroundOfMosaiqueSwitch = null,
+		cutOverflowingPiecesSwitch = null,
+		thresholdDistanceInput = null,
+		self = this;
 
-    function toggleSetting () {
-        if (settingComponent) {
-            settingComponent.removeComponent();
-            settingComponent = null;
-        } else {
-            openSetting();
-        }
-    }
-    function openSetting () {
-        if (settingComponent) {
-            return;
-        }
-        settingComponent = new UIComponent();
-        settingComponent.component().classList.add('setting');
-        settingComponent.appendTo(self.component());
+	function toggleSetting() {
+		if (settingComponent) {
+			settingComponent.removeComponent();
+			settingComponent = null;
+		} else {
+			openSetting();
+		}
+	}
 
-        dividesOfOriginal = new InputNumberComponent('divides/original', self.dividesOriginal(), 1, '', function (num) {
-            return Math.max(1, Math.min(1000, parseInt(num)));
-        }, function () {
-            self.dividesOriginal(dividesOfOriginal.value());
-        });
-        dividesOfOriginal.appendTo(settingComponent.component());
+	function openSetting() {
+		if (settingComponent) {
+			return;
+		}
+		settingComponent = new UIComponent();
+		settingComponent.component().classList.add('setting');
+		settingComponent.appendTo(self.component());
 
-        let dividesOfMatching = new InputNumberComponent('divides/matching', self.divides(), 1, '', function (num) {
-            return Math.max(1, Math.min(8, parseInt(num)));
-        }, function () {
-            self.divides(dividesOfMatching.value());
-        });
-        dividesOfMatching.appendTo(settingComponent.component());
+		dividesOfOriginal = new InputNumberComponent('divides/original', self.dividesOriginal(), 1, '', function (num) {
+			return Math.max(1, Math.min(1000, parseInt(num)));
+		}, function () {
+			self.dividesOriginal(dividesOfOriginal.value());
+		});
+		dividesOfOriginal.appendTo(settingComponent.component());
 
-        drawWithUniquePiecesSwitch = new SwitchComponent('unique pieces', self.drawWithUniquePieces(), function (s) {
-            self.drawWithUniquePieces(s.on());
-        });
-        drawWithUniquePiecesSwitch.appendTo(settingComponent.component());
+		let dividesOfMatching = new InputNumberComponent('divides/matching', self.divides(), 1, '', function (num) {
+			return Math.max(1, Math.min(8, parseInt(num)));
+		}, function () {
+			self.divides(dividesOfMatching.value());
+		});
+		dividesOfMatching.appendTo(settingComponent.component());
 
-        findingOrderSwitch = new SwitchProfileComponent('finding order', {
-            LRTB: {
-                action: function () {
-                    self.sortRects(self.sortRectsByLRTB);
-                }
-            },
-            grayscaleWB: {
-                action: function () {
-                    self.sortRects(self.sortRectsByGrayscaleWhiteToBlack);
-                }
-            },
-            grayscaleBW: {
-                action: function () {
-                    self.sortRects(self.sortRectsByGrayscaleBlackToWhite);
-                }
-            }
-        }, 2, function (profile) {
-            profile.action();
-        });
-        findingOrderSwitch.appendTo(settingComponent.component());
+		drawWithUniquePiecesSwitch = new SwitchComponent('unique pieces', self.drawWithUniquePieces(), function (s) {
+			self.drawWithUniquePieces(s.on());
+		});
+		drawWithUniquePiecesSwitch.appendTo(settingComponent.component());
 
-        backgroundColorOriginalCanvasSwitch = new SwitchProfileComponent('background color of original image', {
-            white: {
-                color: 'white'
-            },
-            black: {
-                color: 'black'
-            }
-        }, self.backgroundColorOfOriginal() == 'white' ? 0 : 1, function (profile) {
-            self.backgroundColorOfOriginal(profile.color);
-        });
-        backgroundColorOriginalCanvasSwitch.appendTo(settingComponent.component());
+		findingOrderSwitch = new SwitchProfileComponent('finding order', {
+			LRTB: {
+				action: function () {
+					self.sortRects(self.sortRectsByLRTB);
+				}
+			},
+			grayscaleWB: {
+				action: function () {
+					self.sortRects(self.sortRectsByGrayscaleWhiteToBlack);
+				}
+			},
+			grayscaleBW: {
+				action: function () {
+					self.sortRects(self.sortRectsByGrayscaleBlackToWhite);
+				}
+			}
+		}, 2, function (profile) {
+			profile.action();
+		});
+		findingOrderSwitch.appendTo(settingComponent.component());
 
-        cutOverflowingPiecesSwitch = new SwitchComponent('cut overflowing pieces', self.cutOverflowingPieces(), function (s) {
-            self.cutOverflowingPieces(s.on());
-        });
-        cutOverflowingPiecesSwitch.appendTo(settingComponent.component());
+		backgroundColorOriginalCanvasSwitch = new SwitchProfileComponent('background color of original image', {
+			white: {
+				color: 'white'
+			},
+			black: {
+				color: 'black'
+			}
+		}, self.backgroundColorOfOriginal() == 'white' ? 0 : 1, function (profile) {
+			self.backgroundColorOfOriginal(profile.color);
+		});
+		backgroundColorOriginalCanvasSwitch.appendTo(settingComponent.component());
 
-        self.minimumDistanceComponent().appendTo(settingComponent.component());
-        self.maximumDistanceComponent().appendTo(settingComponent.component());
-        thresholdDistanceInput = new InputNumberComponent('threshold distance', self.thresholdDistance(), 1, '', function (num) {
-            return Math.max(0, parseFloat(num));
-        }, function () {
-            self.thresholdDistance(thresholdDistanceInput.value());
-        });
-        thresholdDistanceInput.appendTo(settingComponent.component());
+		cutOverflowingPiecesSwitch = new SwitchComponent('cut overflowing pieces', self.cutOverflowingPieces(), function (s) {
+			self.cutOverflowingPieces(s.on());
+		});
+		cutOverflowingPiecesSwitch.appendTo(settingComponent.component());
 
-        backgroundOfMosaiqueSwitch = new SwitchProfileComponent('background of mosaique', {
-            white: {
-                name: 'backgroundWhite'
-            },
-            black: {
-                name: 'backgroundBlack'
-            },
-            originalImage: {
-                name: 'backgroundOriginal'
-            }
-        }, ['backgroundWhite', 'backgroundBlack', 'backgroundOriginal'].indexOf(self.backgroundOfMosaique()), function (profile) {
-            self.backgroundOfMosaique(profile.name);
-        });
-        backgroundOfMosaiqueSwitch.appendTo(settingComponent.component());
-    }
+		self.minimumDistanceComponent().appendTo(settingComponent.component());
+		self.maximumDistanceComponent().appendTo(settingComponent.component());
+		thresholdDistanceInput = new InputNumberComponent('threshold distance', self.thresholdDistance(), 1, '', function (num) {
+			return Math.max(0, parseFloat(num));
+		}, function () {
+			self.thresholdDistance(thresholdDistanceInput.value());
+		});
+		thresholdDistanceInput.appendTo(settingComponent.component());
+
+		backgroundOfMosaiqueSwitch = new SwitchProfileComponent('background of mosaique', {
+			white: {
+				name: 'backgroundWhite'
+			},
+			black: {
+				name: 'backgroundBlack'
+			},
+			originalImage: {
+				name: 'backgroundOriginal'
+			}
+		}, ['backgroundWhite', 'backgroundBlack', 'backgroundOriginal'].indexOf(self.backgroundOfMosaique()), function (profile) {
+			self.backgroundOfMosaique(profile.name);
+		});
+		backgroundOfMosaiqueSwitch.appendTo(settingComponent.component());
+	}
 };
 MosaiqueComponent.prototype.minimumDistanceComponent = function () {
-    if (!this._minimumDistanceComponent) {
-        this._minimumDistanceComponent = new ValueComponent('minimum distance', 10000);
-    }
-    return this._minimumDistanceComponent;
+	if (!this._minimumDistanceComponent) {
+		this._minimumDistanceComponent = new ValueComponent('minimum distance', 10000);
+	}
+	return this._minimumDistanceComponent;
 };
 MosaiqueComponent.prototype.maximumDistanceComponent = function () {
-    if (!this._maximumDistanceComponent) {
-        this._maximumDistanceComponent = new ValueComponent('maximum distance', 0);
-    }
-    return this._maximumDistanceComponent;
+	if (!this._maximumDistanceComponent) {
+		this._maximumDistanceComponent = new ValueComponent('maximum distance', 0);
+	}
+	return this._maximumDistanceComponent;
 };
 MosaiqueComponent.prototype.resizeComponent = function () {
 	UIComponent.prototype.resizeComponent.call(this);
-		
+
 	let canvasScale = 1,
 		pixelSize = this.pixelSize();
 	this.canvasComponents().forEach(function (canvasComponent, i) {
-        let rect = canvasComponent.rect();
+		let rect = canvasComponent.rect();
 		canvasComponent.canvasScale(canvasScale);
-		canvasComponent.canvasPixelSize({width: pixelSize.width, height: pixelSize.height});
-		canvasComponent.canvasSize({width: rect.width, height: rect.width});
+		canvasComponent.canvasPixelSize({
+			width: pixelSize.width,
+			height: pixelSize.height
+		});
+		canvasComponent.canvasSize({
+			width: rect.width,
+			height: rect.width
+		});
 	});
-	
-    this.draw();
+
+	this.draw();
 };
 MosaiqueComponent.prototype.canvasForOriginal = function () {
 	if (!this._canvasForOriginal) {
@@ -302,7 +340,7 @@ MosaiqueComponent.prototype.ctxForOriginal = function () {
 MosaiqueComponent.prototype.ctxForMosaique = function () {
 	return this.canvasForMosaique().getContext('2d');
 };
-		
+
 MosaiqueComponent.prototype.standbyOriginalImageAndMosaiqueImage = function (readyOriginalImageAction, readyMosaiqueImageAction) {
 	let startTime = new Date().getTime(),
 		self = this;
@@ -319,7 +357,7 @@ MosaiqueComponent.prototype.standbyOriginalImageAndMosaiqueImage = function (rea
 };
 MosaiqueComponent.prototype.loadImagesFromFiles = function (finishedAction) {
 	let self = this,
-        pieceSize = this.pieceSize();
+		pieceSize = this.pieceSize();
 	this.imageFileList().forEach(function (imageFile) {
 		let image = new Image();
 		MediaFileLoader.instance().addMediaFile(imageFile.src, 'image', function (image, url) {
@@ -364,7 +402,7 @@ MosaiqueComponent.prototype.mosaiquePieces = function (pieces) {
 MosaiqueComponent.prototype.createMosaique = function () {
 	let self = this,
 		foundPieces = {},
-        pieceSize = this.pieceSize(),
+		pieceSize = this.pieceSize(),
 		divideRectsOfOriginalImage = createRectArray(this.dividesOriginal(), this.dividesOriginal(), pieceSize.width, pieceSize.height);
 	divideRectsOfOriginalImage = this.sortRects().call(this, this.ctxForOriginal(), divideRectsOfOriginalImage);
 
@@ -394,8 +432,8 @@ MosaiqueComponent.prototype.createMosaique = function () {
 MosaiqueComponent.prototype.sortRects = function (action) {
 	if (action) {
 		this._sortRects = action;
-        this.createMosaique();
-        this.drawMosaique();
+		this.createMosaique();
+		this.drawMosaique();
 	}
 	if (!this._sortRects) {
 		this._sortRects = this.sortRectsByGrayscaleBlackToWhite;
@@ -442,7 +480,7 @@ MosaiqueComponent.prototype.findSimilarImageFileWithImageData = function (imageF
 		distance = null,
 		minimumDistance = null,
 		maximumDistance = null,
-        self = this;
+		self = this;
 	imageFileList.forEach(function (imageFile) {
 		let src = imageFile.src;
 		if (excludeSrcMap && excludeSrcMap[src]) {
@@ -463,7 +501,7 @@ MosaiqueComponent.prototype.findSimilarImageFileWithImageData = function (imageF
 		this.minimumDistanceComponent().value(minimumDistance);
 	}
 	if (this.maximumDistanceComponent().value() < maximumDistance) {
-        this.maximumDistanceComponent().value(maximumDistance);
+		this.maximumDistanceComponent().value(maximumDistance);
 	}
 	if (minimumDistance > this.thresholdDistance()) {
 		return null;
@@ -484,7 +522,7 @@ MosaiqueComponent.prototype.backgroundOriginal = function () {
 MosaiqueComponent.prototype.backgroundOfMosaique = function (symbol) {
 	if (symbol) {
 		this._backgroundOfMosaique = symbol;
-        this.drawMosaique();
+		this.drawMosaique();
 	}
 	if (!this._backgroundOfMosaique) {
 		this._backgroundOfMosaique = 'backgroundWhite';
@@ -492,18 +530,18 @@ MosaiqueComponent.prototype.backgroundOfMosaique = function (symbol) {
 	return this._backgroundOfMosaique;
 };
 MosaiqueComponent.prototype.backgroundColorOfOriginal = function (color) {
-    if (color) {
-        this._backgroundColorOfOriginal = color;
-        if (this.currentImageFile()) {
-            let self = this;
-            this.loadImage(this.currentImageFile().src, function (image) {
-                self.drawOriginal(image);
-                self.createMosaique();
-                self.drawMosaique();
-            });
-        }
-    }
-    return this._backgroundColorOfOriginal;
+	if (color) {
+		this._backgroundColorOfOriginal = color;
+		if (this.currentImageFile()) {
+			let self = this;
+			this.loadImage(this.currentImageFile().src, function (image) {
+				self.drawOriginal(image);
+				self.createMosaique();
+				self.drawMosaique();
+			});
+		}
+	}
+	return this._backgroundColorOfOriginal;
 };
 MosaiqueComponent.prototype.backgroundMosaiqueFunctions = {
 	backgroundWhite: MosaiqueComponent.prototype.backgroundWhite,
@@ -511,79 +549,77 @@ MosaiqueComponent.prototype.backgroundMosaiqueFunctions = {
 	backgroundOriginal: MosaiqueComponent.prototype.backgroundOriginal
 };
 MosaiqueComponent.prototype.drawWithUniquePieces = function (aBoolean) {
-    if (aBoolean !== undefined) {
-        this._drawWithUniquePieces = aBoolean;
-        this.createMosaique();
-        this.drawMosaique();
-    }
-    return this._drawWithUniquePieces;
+	if (aBoolean !== undefined) {
+		this._drawWithUniquePieces = aBoolean;
+		this.createMosaique();
+		this.drawMosaique();
+	}
+	return this._drawWithUniquePieces;
 };
 MosaiqueComponent.prototype.cutOverflowingPieces = function (aBoolean) {
-    if (aBoolean !== undefined) {
-        this._cutOverflowingPieces = aBoolean;
-        if (this.currentImageFile()) {
-            let self = this;
-            this.loadImage(this.currentImageFile().src, function (image) {
-                self.drawOriginal(image);
-                self.createMosaique();
-                self.drawMosaique();
-            });
-        }
-    }
-    return this._cutOverflowingPieces;
+	if (aBoolean !== undefined) {
+		this._cutOverflowingPieces = aBoolean;
+		if (this.currentImageFile()) {
+			let self = this;
+			this.loadImage(this.currentImageFile().src, function (image) {
+				self.drawOriginal(image);
+				self.createMosaique();
+				self.drawMosaique();
+			});
+		}
+	}
+	return this._cutOverflowingPieces;
 };
 MosaiqueComponent.prototype.thresholdDistance = function (num) {
-    if (num !== undefined) {
-        this._thresholdDistance = num;
-        this.createMosaique();
-        this.drawMosaique();
-    }
-    return this._thresholdDistance;
+	if (num !== undefined) {
+		this._thresholdDistance = num;
+		this.createMosaique();
+		this.drawMosaique();
+	}
+	return this._thresholdDistance;
 };
 MosaiqueComponent.prototype.divides = function (num) {
-    if (num !== undefined) {
-        this._divides = num;
-        this.draw();
-    }
-    return this._divides;
+	if (num !== undefined) {
+		this._divides = num;
+		this.draw();
+	}
+	return this._divides;
 };
 MosaiqueComponent.prototype.dividesOriginal = function (num) {
-    if (num !== undefined) {
-        this._dividesOriginal = num;
-        this.createMosaique();
-        this.drawMosaique();
-    }
-    return this._dividesOriginal;
+	if (num !== undefined) {
+		this._dividesOriginal = num;
+		this.createMosaique();
+		this.drawMosaique();
+	}
+	return this._dividesOriginal;
 };
 MosaiqueComponent.prototype.pieceSize = function () {
-    return {
-        width: this.pixelSize().width / this.dividesOriginal(),
-        height: this.pixelSize().height / this.dividesOriginal()
-    };
+	return {
+		width: this.pixelSize().width / this.dividesOriginal(),
+		height: this.pixelSize().height / this.dividesOriginal()
+	};
 };
 
 // drawing
 MosaiqueComponent.prototype.draw = function () {
-    if (!this.currentImageFile()) {
-        return;
-    }
+	if (!this.currentImageFile()) {
+		return;
+	}
 	if (this._dividesChanged) {
 		this._meanColorsBySrc = {};
 		this._divides = dividesChanged;
 		this._dividesChanged = false;
 	}
 
-	this.standbyOriginalImageAndMosaiqueImage(function (startTime, measureTime) {
-	}, function (startTime, measureTime) {
-	});
+	this.standbyOriginalImageAndMosaiqueImage(function (startTime, measureTime) {}, function (startTime, measureTime) {});
 }
 MosaiqueComponent.prototype.drawOriginal = function (image) {
 	let ctx = this.ctxForOriginal(),
 		imageAspect = image.width / image.height,
-        pixelSize = this.pixelSize(),
-        pieceSize = this.pieceSize(),
-        width = pieceSize.width,
-        height = pieceSize.height,
+		pixelSize = this.pixelSize(),
+		pieceSize = this.pieceSize(),
+		width = pieceSize.width,
+		height = pieceSize.height,
 		drawWidth = pixelSize.width,
 		drawHeight = drawWidth / imageAspect;
 	if (drawHeight > pixelSize.height) {
