@@ -44,7 +44,7 @@ function meanColorsWithContext(ctx, ox, oy, width, height, divides) {
 	return meanColors;
 }
 
-function medianColorsWithContext(ctx, ox, oy, width, height) {
+function medianColorsWithContext(ctx, ox, oy, width, height, divides) {
 	let cols = divides,
 		rows = divides,
 		stridex = width / cols,
