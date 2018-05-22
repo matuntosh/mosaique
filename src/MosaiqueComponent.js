@@ -605,12 +605,6 @@ MosaiqueComponent.prototype.draw = function () {
 	if (!this.currentImageFile()) {
 		return;
 	}
-	if (this._dividesChanged) {
-		this._meanColorsBySrc = {};
-		this._divides = dividesChanged;
-		this._dividesChanged = false;
-	}
-
 	this.standbyOriginalImageAndMosaiqueImage(function (startTime, measureTime) {}, function (startTime, measureTime) {});
 }
 MosaiqueComponent.prototype.drawOriginal = function (image) {
