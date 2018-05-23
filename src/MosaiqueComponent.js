@@ -85,7 +85,7 @@ MosaiqueComponent.prototype.requestFiles = function () {
 	let originalImageFileInput = new FileInputArea(function (file) {
 		originalImageFileInput.removeComponent();
 		let originalImageSrc = 'originalImageFile',
-			originalImage = new Image(),
+			originalImage = self.newImage(),
 			reader = new FileReader();
 		originalImage.onload = function () {
 			originalImageWasLoaded = true;
@@ -359,7 +359,7 @@ MosaiqueComponent.prototype.loadImagesFromFiles = function (finishedAction) {
 	let self = this,
 		pieceSize = this.pieceSize();
 	this.imageFileList().forEach(function (imageFile) {
-		let image = new Image();
+		let image = self.newImage();
 		MediaFileLoader.instance().addMediaFile(imageFile.src, 'image', function (image, url) {
 			meanColorsWithImage(image, url, pieceSize.width, pieceSize.height, self.divides());
 			self._loadedCount += 1;
@@ -368,6 +368,11 @@ MosaiqueComponent.prototype.loadImagesFromFiles = function (finishedAction) {
 		self._imageBySrc[imageFile.src] = image;
 	});
 	MediaFileLoader.instance().resume(finishedAction);
+};
+MosaiqueComponent.prototype.newImage = function () {
+	let image = new Image();
+	image.crossOrigin = 'anonymous';
+	return image;
 };
 MosaiqueComponent.prototype.loadImage = function (src, action, _cache) {
 	let image = this._imageBySrc[src],
@@ -380,7 +385,7 @@ MosaiqueComponent.prototype.loadImage = function (src, action, _cache) {
 		return;
 	}
 
-	image = new Image();
+	image = this.newImage();
 	MediaFileLoader.instance().loadMediaFile(src, 'image', function (media) {
 		if (action) {
 			action(image, src);
