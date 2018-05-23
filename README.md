@@ -74,10 +74,12 @@ And run web browser with disabling Local File Restrictions option.
 #### Mac + Safari
 
 `open -a Safari`
+
 	1. Open 'Menu -> Safari -> Preferences'.
 	2. Select 'Advanced Tab'.
 	3. Check on 'Show Develop menu in menu bar'.
 	4. Check on 'Menu -> Develop -> Disable Local File Restrictions'.
+
 `open -a Safari mosaique-selective.html`
 
 #### Mac + Chrome
@@ -87,6 +89,7 @@ And run web browser with disabling Local File Restrictions option.
 #### Mac + Firefox
 
 open mosaique-selective.html with Firefox normally.  
+
 `open -a Firefox`
 
 
@@ -95,6 +98,7 @@ open mosaique-selective.html with Firefox normally.
 ```
 "C:\Program Files (x86)\Google\Chrome\Application\chrome.exe" --allow-file-access-from-files
 ```
+
 Open (CTRL+O) mosaique-selective.html file on Chrome.
 
 
