@@ -84,7 +84,7 @@ And run web browser with disabling Local File Restrictions option.
 
 #### Mac + Chrome
 
-`/Applications/Google\ Chrome.app/Contents/MacOS/Google\ Chrome --args --allow-file-access-from-files mosaique-selective.html`
+`open -a "Google Chrome" --args --allow-file-access-from-files`
 
 #### Mac + Firefox
 
@@ -96,7 +96,7 @@ open mosaique-selective.html with Firefox normally.
 #### Windows + Chrome
 
 ```
-"C:\Program Files (x86)\Google\Chrome\Application\chrome.exe" --allow-file-access-from-files
+start chrome.exe --allow-file-access-from-files
 ```
 
 Open (CTRL+O) mosaique-selective.html file on Chrome.
@@ -104,7 +104,7 @@ Open (CTRL+O) mosaique-selective.html file on Chrome.
 
 #### Windows + Firefox
 
-open mosaique-selective.html with Firefox normally.
+Open mosaique-selective.html with Firefox normally.
 
 
 #### Brackets Live Preview
