@@ -314,9 +314,10 @@ MosaiqueComponent.prototype.resizeComponent = function () {
 			width: pixelSize.width,
 			height: pixelSize.height
 		});
+		let min = Math.min(rect.width, rect.height);
 		canvasComponent.canvasSize({
-			width: rect.width,
-			height: rect.width
+			width: min,
+			height: min
 		});
 	});
 
@@ -647,7 +648,10 @@ MosaiqueComponent.prototype.drawMosaique = function () {
 	this.backgroundMosaiqueFunctions[this.backgroundOfMosaique()].call(this);
 	this.mosaiquePieces().forEach(function (piece, index) {
 		if (piece.image) {
-			drawImageFitOn(self.ctxForMosaique(), piece.image, piece.x, piece.y, piece.width, piece.height);
+			drawImageFitIn(self.ctxForMosaique(), piece.image, piece.x, piece.y, piece.width, piece.height);
+//			drawImageFillIn(self.ctxForMosaique(), piece.image, piece.x, piece.y, piece.width, piece.height);
+//			drawImageClipRectIn(self.ctxForMosaique(), piece.image, 0, 0, piece.width, piece.height, piece.x, piece.y);
+//			drawImageClipCircleIn(self.ctxForMosaique(), piece.image, piece.image.width / 2, piece.image.height / 2, piece.image.width / 2, piece.x + piece.width / 2, piece.y + piece.height / 2, piece.width / 2);
 		}
 	});
 };
