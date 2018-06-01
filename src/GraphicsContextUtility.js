@@ -213,7 +213,15 @@ function meanColorsWithImage(image, src, imageWidth, imageHeight, divides) {
 	return meanColors;
 }
 
-function drawImageFitOn(ctx, image, x, y, width, height) {
+
+function drawImageFillIn(ctx, image, x, y, width, height) {
+	let displayWidth = width,
+		displayHeight = height,
+		displayX = x,
+		displayY = y;
+	ctx.drawImage(image, 0, 0, image.width, image.height, displayX, displayY, displayWidth, displayHeight);
+}
+function drawImageFitIn(ctx, image, x, y, width, height) {
 	let aspect = image.width / image.height,
 		displayWidth = width,
 		displayHeight = displayWidth / aspect;
@@ -224,4 +232,26 @@ function drawImageFitOn(ctx, image, x, y, width, height) {
 	let displayX = (width - displayWidth) / 2 + x,
 		displayY = (height - displayHeight) / 2 + y;
 	ctx.drawImage(image, 0, 0, image.width, image.height, displayX, displayY, displayWidth, displayHeight);
+}
+function drawImageClipRectIn(ctx, image, x, y, width, height, displayX, displayY) {
+	let displayWidth = width,
+		displayHeight = height;
+	ctx.drawImage(image, x, y, width, height, displayX, displayY, displayWidth, displayHeight);
+}
+function drawImageClipCircleIn(ctx, image, centerX, centerY, radius, displayCenterX, displayCenterY, displayRadius) {
+	ctx.save();
+	ctx.beginPath();
+	ctx.moveTo(displayCenterX, displayCenterY);
+	ctx.arc(displayCenterX, displayCenterY, displayRadius, 0, Math.PI * 2);
+	ctx.clip();
+	let x = centerX - radius,
+		y = centerY - radius,
+		width = radius * 2,
+		height = radius * 2,
+		displayX = displayCenterX - displayRadius,
+		displayY = displayCenterY - displayRadius,
+		displayWidth = displayRadius * 2,
+		displayHeight = displayRadius * 2;
+	ctx.drawImage(image, x, y, width, height, displayX, displayY, displayWidth, displayHeight);
+	ctx.restore();
 }
