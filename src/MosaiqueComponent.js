@@ -646,9 +646,17 @@ MosaiqueComponent.prototype.drawMosaique = function () {
 	this.mosaiquePieces().forEach(function (piece, index) {
 		if (piece.image) {
 			drawImageFitIn(self.ctxForMosaique(), piece.image, piece.x, piece.y, piece.width, piece.height);
-//			drawImageFillIn(self.ctxForMosaique(), piece.image, piece.x, piece.y, piece.width, piece.height);
-//			drawImageClipRectIn(self.ctxForMosaique(), piece.image, 0, 0, piece.width, piece.height, piece.x, piece.y);
-//			drawImageClipCircleIn(self.ctxForMosaique(), piece.image, piece.image.width / 2, piece.image.height / 2, piece.image.width / 2, piece.x + piece.width / 2, piece.y + piece.height / 2, piece.width / 2);
 		}
 	});
+};
+
+// selecting
+MosaiqueComponent.prototype.selectMosaiquePieceAtPoint = function (point) {
+    for (var i = 0; i < this.mosaiquePieces().length; i += 1) {
+        let piece = this.mosaiquePieces()[i];
+        if (piece.x <= point.x && point.x <= piece.x + piece.width && piece.y <= point.y && point.y <= piece.y + piece.height) {
+            return piece;
+        }
+    }
+    return null;
 };
