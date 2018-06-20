@@ -159,9 +159,6 @@ MosaiqueComponent.prototype.canvasComponents = function () {
 	}
 	return this._canvasComponents;
 };
-MosaiqueComponent.prototype.cssClassName = function () {
-	return 'MosaiqueComponent';
-};
 MosaiqueComponent.prototype.createComponent = function () {
 	let c = UIComponent.prototype.createComponent.call(this);
 
@@ -612,7 +609,7 @@ MosaiqueComponent.prototype.draw = function () {
 		return;
 	}
 	this.standbyOriginalImageAndMosaiqueImage(function (startTime, measureTime) {}, function (startTime, measureTime) {});
-}
+};
 MosaiqueComponent.prototype.drawOriginal = function (image) {
 	let ctx = this.ctxForOriginal(),
 		imageAspect = image.width / image.height,
