@@ -25,9 +25,30 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 function TransitOriginalMosaiqueComponent () {
 	MosaiqueComponent.call(this);
 	this._displayCanvas = null;
+	this._displayHistory = [];
+	this._automaticTransit = false;
+    this._stateDisplay = null;
 }
 inherits(TransitOriginalMosaiqueComponent, MosaiqueComponent);
 
+TransitOriginalMosaiqueComponent.prototype.automaticTransit = function (aBoolean) {
+	if (aBoolean !== undefined) {
+		this._automaticTransit = aBoolean;
+	}
+	return this._automaticTransit;
+};
+TransitOriginalMosaiqueComponent.prototype.stateDisplayOriginal = 'stateDisplayOriginal';
+TransitOriginalMosaiqueComponent.prototype.stateDisplayMosaique = 'stateDisplayMosaique';
+TransitOriginalMosaiqueComponent.prototype.stateDisplayTransit = 'stateDisplayTransit';
+TransitOriginalMosaiqueComponent.prototype.stateDisplay = function (state) {
+    if (state) {
+        this._stateDisplay = state;
+    }
+    if (!this._stateDisplay) {
+        this._stateDisplay = this.stateDisplayOriginal;
+    }
+    return this._stateDisplay;
+};
 TransitOriginalMosaiqueComponent.prototype.displayCanvas = function () {
 	if (!this._displayCanvas) {
 		this._displayCanvas = document.createElement('canvas');
@@ -39,8 +60,11 @@ TransitOriginalMosaiqueComponent.prototype.displayCanvas = function () {
 	}
 	return this._displayCanvas;
 };
+TransitOriginalMosaiqueComponent.prototype.displayHistory = function () {
+	return this._displayHistory;
+};
 TransitOriginalMosaiqueComponent.prototype.cssClassName = function () {
-	return 'MosaiqueComponent';
+	return 'UIComponent MosaiqueComponent';
 };
 TransitOriginalMosaiqueComponent.prototype.createComponent = function () {
 	this.canvasComponents().splice(1, 1);
@@ -49,7 +73,13 @@ TransitOriginalMosaiqueComponent.prototype.createComponent = function () {
 	return MosaiqueComponent.prototype.createComponent.call(this);
 };
 TransitOriginalMosaiqueComponent.prototype.mouseupAction = function (event) {
-	if (this.stateDisplay() != this.stateDisplayMosaique) {
+	if (event.altKey) {
+		this.backToPrevious();
+		return;
+	}
+	if (this.stateDisplay() == this.stateDisplayOriginal) {
+        this.stateDisplay(this.stateDisplayMosaique);
+        this.draw();
 		return;
 	}
 	let rect = this.displayCanvas().getBoundingClientRect(),
@@ -62,7 +92,7 @@ TransitOriginalMosaiqueComponent.prototype.mouseupAction = function (event) {
 	if (!piece) {
 		return;
 	}
-	this.currentImageFile({src: piece.src});
+	this.selectNext({src: piece.src});
 };
 
 TransitOriginalMosaiqueComponent.prototype.displayOriginal = function () {
@@ -82,8 +112,48 @@ TransitOriginalMosaiqueComponent.prototype.draw = function () {
 	}
 	let self = this;
 	this.standbyOriginalImageAndMosaiqueImage(function() {
-		self.displayOriginal();
+        if (self.stateDisplay() == self.stateDisplayOriginal) {
+            self.displayOriginal();
+            if (self.automaticTransit()) {
+                self.stateDisplay(self.stateDisplayMosaique);
+                self.draw();
+            }
+        }
 	}, function () {
-		self.displayMosaique();
+		if (self.stateDisplay() == self.stateDisplayMosaique) {
+			self.displayMosaique();
+		}
 	});
+};
+
+// selecting
+TransitOriginalMosaiqueComponent.prototype.selectMosaiquePieceAtPoint = function (point) {
+    for (var i = 0; i < this.mosaiquePieces().length; i += 1) {
+        let piece = this.mosaiquePieces()[i];
+        if (piece.x <= point.x && point.x <= piece.x + piece.width && piece.y <= point.y && point.y <= piece.y + piece.height) {
+            return piece;
+        }
+    }
+    return null;
+};
+TransitOriginalMosaiqueComponent.prototype.selectNext = function (file) {
+	if (this.currentImageFile()) {
+		this.currentImageFile().mosaiquePieces = this.mosaiquePieces();
+		this.displayHistory().push(this.currentImageFile());
+	}
+    this.stateDisplay(this.stateDisplayOriginal);
+	this.currentImageFile(file);
+};
+TransitOriginalMosaiqueComponent.prototype.backToPrevious = function () {
+	if (this.stateDisplay() == this.stateDisplayMosaique) {
+        this.stateDisplay(this.stateDisplayOriginal);
+		this.currentImageFile(this.currentImageFile());
+	} else {
+        if (this.displayHistory().length <= 0) {
+            return;
+        }
+        this.stateDisplay(this.stateDisplayMosaique);
+		let file = this.displayHistory().pop();
+		this.currentImageFile(file);
+	}
 };
