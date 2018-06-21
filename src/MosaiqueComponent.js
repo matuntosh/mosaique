@@ -50,8 +50,21 @@ function MosaiqueComponent() {
 
 	this._minimumDistanceComponent = null;
 	this._maximumDistanceComponent = null;
+
+	this._stateDisplay = null;
 }
 inherits(MosaiqueComponent, UIComponent);
+
+MosaiqueComponent.prototype.stateDisplayOriginal = 'stateDisplayOriginal';
+MosaiqueComponent.prototype.stateDisplayMosaique = 'stateDisplayMosaique';
+MosaiqueComponent.prototype.stateDisplayTransit = 'stateDisplayTransit';
+MosaiqueComponent.prototype.stateDisplay = function (state) {
+	if (state) {
+		this._stateDisplay = state;
+		this.draw();
+	}
+	return this._stateDisplay;
+};
 
 MosaiqueComponent.prototype.loadFrom = function (originalImagePath, pieceCsvPath) {
 	let self = this;
@@ -69,7 +82,6 @@ MosaiqueComponent.prototype.loadFrom = function (originalImagePath, pieceCsvPath
 					self.currentImageFile({
 						src: originalImagePath
 					});
-					self.draw();
 					WaitComponent.close();
 				});
 			}
@@ -91,14 +103,13 @@ MosaiqueComponent.prototype.requestFiles = function () {
 			originalImageWasLoaded = true;
 			if (originalImageWasLoaded && csvFileWasLoaded) {
 				dialog.removeComponent();
-				self.draw();
 			}
 		};
 		reader.onload = function () {
+			self._imageBySrc[originalImageSrc] = originalImage;
 			self.currentImageFile({
 				src: originalImageSrc
 			});
-			self._imageBySrc[originalImageSrc] = originalImage;
 			originalImage.src = reader.result;
 		};
 		reader.readAsDataURL(file);
@@ -110,15 +121,10 @@ MosaiqueComponent.prototype.requestFiles = function () {
 		reader.onload = function () {
 			self.imageFileList(MC.CharacterSeparatedValues.parse(reader.result).filter(function (imageFile) {
 				return imageFile.src != "";
-			}));
-			MediaFileLoader.instance().maxLoadingCount(1000);
-			WaitComponent.open('Loading images ...');
-			self.loadImagesFromFiles(function () {
-				WaitComponent.close();
+			}), function () {
 				csvFileWasLoaded = true;
 				if (originalImageWasLoaded && csvFileWasLoaded) {
 					dialog.removeComponent();
-					self.draw();
 				}
 			});
 		};
@@ -143,12 +149,21 @@ MosaiqueComponent.prototype.pixelSize = function (size) {
 MosaiqueComponent.prototype.currentImageFile = function (file) {
 	if (file) {
 		this._currentImageFile = file;
+		this.stateDisplay(this.stateDisplayOriginal);
 	}
 	return this._currentImageFile;
 };
-MosaiqueComponent.prototype.imageFileList = function (list) {
+MosaiqueComponent.prototype.imageFileList = function (list, finishedAction) {
 	if (list) {
 		this._imageFileList = list;
+		WaitComponent.open('Loading images ...');
+		let self = this;
+		this.loadImagesFromFiles(function () {
+			self.stateDisplay(self.stateDisplayOriginal);
+			if (finishedAction) {
+				finishedAction();
+			}
+		});
 	}
 	return this._imageFileList;
 };
@@ -318,7 +333,7 @@ MosaiqueComponent.prototype.resizeComponent = function () {
 		});
 	});
 
-	this.draw();
+	this.stateDisplay(this.stateDisplayOriginal);
 };
 MosaiqueComponent.prototype.canvasForOriginal = function () {
 	if (!this._canvasForOriginal) {
@@ -343,9 +358,12 @@ MosaiqueComponent.prototype.standbyOriginalImageAndMosaiqueImage = function (rea
 	let startTime = new Date().getTime(),
 		self = this;
 	this.loadImage(this.currentImageFile().src, function (image) {
-		self.drawOriginal(image);
 		let time = new Date().getTime();
-		readyOriginalImageAction(startTime, time - startTime);
+		if (self.stateDisplay() == self.stateDisplayOriginal) {
+			self.drawOriginal(image);
+			readyOriginalImageAction(startTime, time - startTime);
+			self._stateDisplay = self.stateDisplayMosaique;
+		}
 		setTimeout(function () {
 			self.createMosaique();
 			self.drawMosaique();
@@ -365,7 +383,13 @@ MosaiqueComponent.prototype.loadImagesFromFiles = function (finishedAction) {
 		}, image);
 		self._imageBySrc[imageFile.src] = image;
 	});
-	MediaFileLoader.instance().resume(finishedAction);
+	MediaFileLoader.instance().maxLoadingCount(1000);
+	MediaFileLoader.instance().resume(function () {
+		WaitComponent.close();
+		if (finishedAction) {
+			finishedAction();
+		}
+	});
 };
 MosaiqueComponent.prototype.newImage = function () {
 	let image = new Image();
@@ -435,8 +459,7 @@ MosaiqueComponent.prototype.createMosaique = function () {
 MosaiqueComponent.prototype.sortRects = function (action) {
 	if (action) {
 		this._sortRects = action;
-		this.createMosaique();
-		this.drawMosaique();
+		this.stateDisplay(this.stateDisplayMosaique);
 	}
 	if (!this._sortRects) {
 		this._sortRects = this.sortRectsByGrayscaleBlackToWhite;
@@ -521,11 +544,12 @@ MosaiqueComponent.prototype.backgroundBlack = function () {
 }
 MosaiqueComponent.prototype.backgroundOriginal = function () {
 	this.ctxForMosaique().drawImage(this.canvasForOriginal(), 0, 0, this.canvasForOriginal().width, this.canvasForOriginal().height, 0, 0, this.pixelSize().width, this.pixelSize().height);
+	this.stateDisplay(this.stateDisplayOriginal);
 }
 MosaiqueComponent.prototype.backgroundOfMosaique = function (symbol) {
 	if (symbol) {
 		this._backgroundOfMosaique = symbol;
-		this.drawMosaique();
+		this.stateDisplay(this.stateDisplayMosaique);
 	}
 	if (!this._backgroundOfMosaique) {
 		this._backgroundOfMosaique = 'backgroundWhite';
@@ -535,14 +559,7 @@ MosaiqueComponent.prototype.backgroundOfMosaique = function (symbol) {
 MosaiqueComponent.prototype.backgroundColorOfOriginal = function (color) {
 	if (color) {
 		this._backgroundColorOfOriginal = color;
-		if (this.currentImageFile()) {
-			let self = this;
-			this.loadImage(this.currentImageFile().src, function (image) {
-				self.drawOriginal(image);
-				self.createMosaique();
-				self.drawMosaique();
-			});
-		}
+		this.stateDisplay(this.stateDisplayOriginal);
 	}
 	return this._backgroundColorOfOriginal;
 };
@@ -554,45 +571,35 @@ MosaiqueComponent.prototype.backgroundMosaiqueFunctions = {
 MosaiqueComponent.prototype.drawWithUniquePieces = function (aBoolean) {
 	if (aBoolean !== undefined) {
 		this._drawWithUniquePieces = aBoolean;
-		this.createMosaique();
-		this.drawMosaique();
+		this.stateDisplay(this.stateDisplayMosaique);
 	}
 	return this._drawWithUniquePieces;
 };
 MosaiqueComponent.prototype.cutOverflowingPieces = function (aBoolean) {
 	if (aBoolean !== undefined) {
 		this._cutOverflowingPieces = aBoolean;
-		if (this.currentImageFile()) {
-			let self = this;
-			this.loadImage(this.currentImageFile().src, function (image) {
-				self.drawOriginal(image);
-				self.createMosaique();
-				self.drawMosaique();
-			});
-		}
+		this.stateDisplay(this.stateDisplayOriginal);
 	}
 	return this._cutOverflowingPieces;
 };
 MosaiqueComponent.prototype.thresholdDistance = function (num) {
 	if (num !== undefined) {
 		this._thresholdDistance = num;
-		this.createMosaique();
-		this.drawMosaique();
+		this.stateDisplay(this.stateDisplayMosaique);
 	}
 	return this._thresholdDistance;
 };
 MosaiqueComponent.prototype.divides = function (num) {
 	if (num !== undefined) {
 		this._divides = num;
-		this.draw();
+		this.stateDisplay(this.stateDisplayOriginal);
 	}
 	return this._divides;
 };
 MosaiqueComponent.prototype.dividesOriginal = function (num) {
 	if (num !== undefined) {
 		this._dividesOriginal = num;
-		this.createMosaique();
-		this.drawMosaique();
+		this.stateDisplay(this.stateDisplayMosaique);
 	}
 	return this._dividesOriginal;
 };
