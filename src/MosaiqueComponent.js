@@ -51,19 +51,19 @@ function MosaiqueComponent() {
 	this._minimumDistanceComponent = null;
 	this._maximumDistanceComponent = null;
 
-	this._stateDisplay = null;
+	this._stateDraw = null;
 }
 inherits(MosaiqueComponent, UIComponent);
 
-MosaiqueComponent.prototype.stateDisplayOriginal = 'stateDisplayOriginal';
-MosaiqueComponent.prototype.stateDisplayMosaique = 'stateDisplayMosaique';
-MosaiqueComponent.prototype.stateDisplayTransit = 'stateDisplayTransit';
-MosaiqueComponent.prototype.stateDisplay = function (state) {
+MosaiqueComponent.prototype.stateDrawOriginal = 'stateDrawOriginal';
+MosaiqueComponent.prototype.stateCreateMosaique = 'stateCreateMosaique';
+MosaiqueComponent.prototype.stateDrawMosaique = 'stateDrawMosaique';
+MosaiqueComponent.prototype.stateDraw = function (state) {
 	if (state) {
-		this._stateDisplay = state;
+		this._stateDraw = state;
 		this.draw();
 	}
-	return this._stateDisplay;
+	return this._stateDraw;
 };
 
 MosaiqueComponent.prototype.loadFrom = function (originalImagePath, pieceCsvPath) {
@@ -139,17 +139,23 @@ MosaiqueComponent.prototype.pixelSize = function (size) {
 		this._pixelSize = size;
 	}
 	if (!this._pixelSize) {
-		this._pixelSize = {
-			width: 1920,
-			height: 1920
-		};
+//		this._pixelSize = {
+//			width: 1920,
+//			height: 1920
+//		};
+        let size = this.size(),
+            min = Math.min(size.width, size.height);
+        this._pixelSize = {
+            width: min,
+            height: min
+        };
 	}
 	return this._pixelSize;
 };
 MosaiqueComponent.prototype.currentImageFile = function (file) {
 	if (file) {
 		this._currentImageFile = file;
-		this.stateDisplay(this.stateDisplayOriginal);
+		this.stateDraw(this.stateDrawOriginal);
 	}
 	return this._currentImageFile;
 };
@@ -159,7 +165,7 @@ MosaiqueComponent.prototype.imageFileList = function (list, finishedAction) {
 		WaitComponent.open('Loading images ...');
 		let self = this;
 		this.loadImagesFromFiles(function () {
-			self.stateDisplay(self.stateDisplayOriginal);
+			self.stateDraw(self.stateDrawOriginal);
 			if (finishedAction) {
 				finishedAction();
 			}
@@ -333,7 +339,7 @@ MosaiqueComponent.prototype.resizeComponent = function () {
 		});
 	});
 
-	this.stateDisplay(this.stateDisplayOriginal);
+	this.stateDraw(this.stateDrawOriginal);
 };
 MosaiqueComponent.prototype.canvasForOriginal = function () {
 	if (!this._canvasForOriginal) {
@@ -359,15 +365,26 @@ MosaiqueComponent.prototype.standbyOriginalImageAndMosaiqueImage = function (rea
 		self = this;
 	this.loadImage(this.currentImageFile().src, function (image) {
 		let time = new Date().getTime();
-		if (self.stateDisplay() == self.stateDisplayOriginal) {
-			self.drawOriginal(image);
-			readyOriginalImageAction(startTime, time - startTime);
-			self._stateDisplay = self.stateDisplayMosaique;
-		}
+        self.drawOriginal(image);
+        readyOriginalImageAction(startTime, time - startTime);
+        if (self.stateDraw() == self.stateDrawOriginal) {
+            self.stateDraw(self.stateCreateMosaique);
+        }
+        self.cursorWait();
 		setTimeout(function () {
-			self.createMosaique();
+			if (self.currentImageFile() && self.currentImageFile().mosaiquePieces) {
+				self.mosaiquePieces(self.currentImageFile().mosaiquePieces);
+			} else {
+                if (self.stateDraw() == self.stateCreateMosaique) {
+                    self.createMosaique();
+                }
+			}
+            if (self.stateDraw() == self.stateCreateMosaique) {
+                self.stateDraw(self.stateDrawMosaique);
+            }
 			self.drawMosaique();
 			readyMosaiqueImageAction(startTime, new Date().getTime() - time);
+            self.cursorDefault();
 		}, 100);
 	});
 };
@@ -459,7 +476,7 @@ MosaiqueComponent.prototype.createMosaique = function () {
 MosaiqueComponent.prototype.sortRects = function (action) {
 	if (action) {
 		this._sortRects = action;
-		this.stateDisplay(this.stateDisplayMosaique);
+		this.stateDraw(this.stateCreateMosaique);
 	}
 	if (!this._sortRects) {
 		this._sortRects = this.sortRectsByGrayscaleBlackToWhite;
@@ -544,12 +561,12 @@ MosaiqueComponent.prototype.backgroundBlack = function () {
 }
 MosaiqueComponent.prototype.backgroundOriginal = function () {
 	this.ctxForMosaique().drawImage(this.canvasForOriginal(), 0, 0, this.canvasForOriginal().width, this.canvasForOriginal().height, 0, 0, this.pixelSize().width, this.pixelSize().height);
-	this.stateDisplay(this.stateDisplayOriginal);
+	this.stateDraw(this.stateDrawOriginal);
 }
 MosaiqueComponent.prototype.backgroundOfMosaique = function (symbol) {
 	if (symbol) {
 		this._backgroundOfMosaique = symbol;
-		this.stateDisplay(this.stateDisplayMosaique);
+		this.stateDraw(this.stateDrawMosaique);
 	}
 	if (!this._backgroundOfMosaique) {
 		this._backgroundOfMosaique = 'backgroundWhite';
@@ -559,7 +576,7 @@ MosaiqueComponent.prototype.backgroundOfMosaique = function (symbol) {
 MosaiqueComponent.prototype.backgroundColorOfOriginal = function (color) {
 	if (color) {
 		this._backgroundColorOfOriginal = color;
-		this.stateDisplay(this.stateDisplayOriginal);
+		this.stateDraw(this.stateDrawOriginal);
 	}
 	return this._backgroundColorOfOriginal;
 };
@@ -571,35 +588,35 @@ MosaiqueComponent.prototype.backgroundMosaiqueFunctions = {
 MosaiqueComponent.prototype.drawWithUniquePieces = function (aBoolean) {
 	if (aBoolean !== undefined) {
 		this._drawWithUniquePieces = aBoolean;
-		this.stateDisplay(this.stateDisplayMosaique);
+		this.stateDraw(this.stateCreateMosaique);
 	}
 	return this._drawWithUniquePieces;
 };
 MosaiqueComponent.prototype.cutOverflowingPieces = function (aBoolean) {
 	if (aBoolean !== undefined) {
 		this._cutOverflowingPieces = aBoolean;
-		this.stateDisplay(this.stateDisplayOriginal);
+		this.stateDraw(this.stateDrawOriginal);
 	}
 	return this._cutOverflowingPieces;
 };
 MosaiqueComponent.prototype.thresholdDistance = function (num) {
 	if (num !== undefined) {
 		this._thresholdDistance = num;
-		this.stateDisplay(this.stateDisplayMosaique);
+		this.stateDraw(this.stateCreateMosaique);
 	}
 	return this._thresholdDistance;
 };
 MosaiqueComponent.prototype.divides = function (num) {
 	if (num !== undefined) {
 		this._divides = num;
-		this.stateDisplay(this.stateDisplayOriginal);
+		this.stateDraw(this.stateDrawOriginal);
 	}
 	return this._divides;
 };
 MosaiqueComponent.prototype.dividesOriginal = function (num) {
 	if (num !== undefined) {
 		this._dividesOriginal = num;
-		this.stateDisplay(this.stateDisplayMosaique);
+		this.stateDraw(this.stateCreateMosaique);
 	}
 	return this._dividesOriginal;
 };
@@ -655,15 +672,4 @@ MosaiqueComponent.prototype.drawMosaique = function () {
 			drawImageFitIn(self.ctxForMosaique(), piece.image, piece.x, piece.y, piece.width, piece.height);
 		}
 	});
-};
-
-// selecting
-MosaiqueComponent.prototype.selectMosaiquePieceAtPoint = function (point) {
-    for (var i = 0; i < this.mosaiquePieces().length; i += 1) {
-        let piece = this.mosaiquePieces()[i];
-        if (piece.x <= point.x && point.x <= piece.x + piece.width && piece.y <= point.y && point.y <= piece.y + piece.height) {
-            return piece;
-        }
-    }
-    return null;
 };
