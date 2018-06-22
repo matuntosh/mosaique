@@ -36,6 +36,7 @@ function MosaiqueComponent() {
 
 	this._imageBySrc = {};
 	this._loadedCount = 0;
+	this._srcKeys = null;
 
 	this._sortRects = null;
 	this._mosaiquePieces = null;
@@ -67,7 +68,9 @@ MosaiqueComponent.prototype.stateDraw = function (state) {
 };
 
 MosaiqueComponent.prototype.loadFrom = function (originalImagePath, pieceCsvPath) {
-	let self = this;
+	let self = this,
+		srcKey = this.srcKeys().mosaiqueSrc,
+		osrcKey = this.srcKeys().originalSrc;
 	new FileListLoader([
 		{
 			name: pieceCsvPath,
@@ -75,13 +78,13 @@ MosaiqueComponent.prototype.loadFrom = function (originalImagePath, pieceCsvPath
 			action: function (text) {
 				WaitComponent.open('Loading images ...');
 				self.imageFileList(MC.CharacterSeparatedValues.parse(text).filter(function (imageFile) {
-					return imageFile.src != ""
+					return imageFile[srcKey] != ""
 				}));
 				MediaFileLoader.instance().maxLoadingCount(1000);
 				self.loadImagesFromFiles(function () {
-					self.currentImageFile({
-						src: originalImagePath
-					});
+					let currentFile = {};
+					currentFile[osrcKey] = originalImagePath;
+					self.currentImageFile(currentFile);
 					WaitComponent.close();
 				});
 			}
@@ -92,7 +95,9 @@ MosaiqueComponent.prototype.requestFiles = function () {
 	let dialog = new UIComponent(),
 		self = this,
 		originalImageWasLoaded = false,
-		csvFileWasLoaded = false;
+		csvFileWasLoaded = false,
+		srcKey = this.srcKeys().mosaiqueSrc,
+		osrcKey = this.srcKeys().originalSrc;
 	dialog.component().className = 'MosaiqueComponent FileDialog';
 	let originalImageFileInput = new FileInputArea(function (file) {
 		originalImageFileInput.removeComponent();
@@ -107,9 +112,9 @@ MosaiqueComponent.prototype.requestFiles = function () {
 		};
 		reader.onload = function () {
 			self._imageBySrc[originalImageSrc] = originalImage;
-			self.currentImageFile({
-				src: originalImageSrc
-			});
+			let currentFile = {};
+			currentFile[osrcKey] = originalImageSrc;
+			self.currentImageFile(currentFile);
 			originalImage.src = reader.result;
 		};
 		reader.readAsDataURL(file);
@@ -120,7 +125,7 @@ MosaiqueComponent.prototype.requestFiles = function () {
 		let reader = new FileReader();
 		reader.onload = function () {
 			self.imageFileList(MC.CharacterSeparatedValues.parse(reader.result).filter(function (imageFile) {
-				return imageFile.src != "";
+				return imageFile[srcKey] != "";
 			}), function () {
 				csvFileWasLoaded = true;
 				if (originalImageWasLoaded && csvFileWasLoaded) {
@@ -172,6 +177,20 @@ MosaiqueComponent.prototype.imageFileList = function (list, finishedAction) {
 		});
 	}
 	return this._imageFileList;
+};
+
+MosaiqueComponent.prototype.defaultSrcKeys = {
+	originalSrc: 'src',
+	mosaiqueSrc: 'src'
+};
+MosaiqueComponent.prototype.srcKeys = function (srcKeys) {
+	if (srcKeys) {
+		this._srcKeys = srcKeys;
+	}
+	if (!this._srcKeys) {
+		this._srcKeys = this.defaultSrcKeys;
+	}
+	return this._srcKeys;
 };
 
 MosaiqueComponent.prototype.canvasComponents = function () {
@@ -363,7 +382,7 @@ MosaiqueComponent.prototype.ctxForMosaique = function () {
 MosaiqueComponent.prototype.standbyOriginalImageAndMosaiqueImage = function (readyOriginalImageAction, readyMosaiqueImageAction) {
 	let startTime = new Date().getTime(),
 		self = this;
-	this.loadImage(this.currentImageFile().src, function (image) {
+	this.loadImage(this.currentImageFile()[this.srcKeys().originalSrc], function (image) {
 		let time = new Date().getTime();
         self.drawOriginal(image);
         readyOriginalImageAction(startTime, time - startTime);
@@ -390,15 +409,17 @@ MosaiqueComponent.prototype.standbyOriginalImageAndMosaiqueImage = function (rea
 };
 MosaiqueComponent.prototype.loadImagesFromFiles = function (finishedAction) {
 	let self = this,
-		pieceSize = this.pieceSize();
+		pieceSize = this.pieceSize(),
+		srcKey = this.srcKeys().mosaiqueSrc;
 	this.imageFileList().forEach(function (imageFile) {
-		let image = self.newImage();
-		MediaFileLoader.instance().addMediaFile(imageFile.src, 'image', function (image, url) {
+		let image = self.newImage(),
+			src = imageFile[srcKey];
+		MediaFileLoader.instance().addMediaFile(src, 'image', function (image, url) {
 			meanColorsWithImage(image, url, pieceSize.width, pieceSize.height, self.divides());
 			self._loadedCount += 1;
 			WaitComponent.message('Loading images ... ' + self._loadedCount + '/' + (self.imageFileList().length));
 		}, image);
-		self._imageBySrc[imageFile.src] = image;
+		self._imageBySrc[src] = image;
 	});
 	MediaFileLoader.instance().maxLoadingCount(1000);
 	MediaFileLoader.instance().resume(function () {
@@ -445,6 +466,8 @@ MosaiqueComponent.prototype.mosaiquePieces = function (pieces) {
 };
 MosaiqueComponent.prototype.createMosaique = function () {
 	let self = this,
+		srcKey = this.srcKeys().mosaiqueSrc,
+		osrcKey = this.srcKeys().originalSrc,
 		foundPieces = {},
 		pieceSize = this.pieceSize(),
 		divideRectsOfOriginalImage = createRectArray(this.dividesOriginal(), this.dividesOriginal(), pieceSize.width, pieceSize.height);
@@ -454,14 +477,13 @@ MosaiqueComponent.prototype.createMosaique = function () {
 		let medianColors = meanColorsWithContext(self.ctxForOriginal(), rect.x, rect.y, rect.width, rect.height, self.divides()),
 			isTranceparent = isTranceparentColors(medianColors),
 			similarImageFile = isTranceparent ? null : self.findSimilarImageFileWithImageData(self.imageFileList(), medianColors, rect.width, rect.height, self.drawWithUniquePieces() ? foundPieces : null),
-			displayImage = similarImageFile ? self._imageBySrc[similarImageFile.src] : null;
+			displayImage = similarImageFile ? self._imageBySrc[similarImageFile[srcKey]] : null;
 
 		if (similarImageFile) {
-			foundPieces[similarImageFile.src] = similarImageFile;
+			foundPieces[similarImageFile[srcKey]] = similarImageFile;
 		}
 
 		let piece = {
-			src: similarImageFile ? similarImageFile.src : null,
 			image: displayImage,
 			x: rect.x,
 			y: rect.y,
@@ -469,6 +491,8 @@ MosaiqueComponent.prototype.createMosaique = function () {
 			height: rect.height,
 			findingOrder: findingIndex
 		};
+		piece[srcKey] = similarImageFile ? similarImageFile[srcKey] : null;
+		piece[osrcKey] = similarImageFile ? similarImageFile[osrcKey] : null;
 
 		return piece;
 	}));
@@ -523,9 +547,10 @@ MosaiqueComponent.prototype.findSimilarImageFileWithImageData = function (imageF
 		distance = null,
 		minimumDistance = null,
 		maximumDistance = null,
-		self = this;
+		self = this,
+		srcKey = this.srcKeys().mosaiqueSrc;
 	imageFileList.forEach(function (imageFile) {
-		let src = imageFile.src;
+		let src = imageFile[srcKey];
 		if (excludeSrcMap && excludeSrcMap[src]) {
 			return;
 		}
@@ -561,7 +586,6 @@ MosaiqueComponent.prototype.backgroundBlack = function () {
 }
 MosaiqueComponent.prototype.backgroundOriginal = function () {
 	this.ctxForMosaique().drawImage(this.canvasForOriginal(), 0, 0, this.canvasForOriginal().width, this.canvasForOriginal().height, 0, 0, this.pixelSize().width, this.pixelSize().height);
-	this.stateDraw(this.stateDrawOriginal);
 }
 MosaiqueComponent.prototype.backgroundOfMosaique = function (symbol) {
 	if (symbol) {
