@@ -31,6 +31,54 @@ function TransitOriginalMosaiqueComponent () {
 }
 inherits(TransitOriginalMosaiqueComponent, MosaiqueComponent);
 
+TransitOriginalMosaiqueComponent.prototype.requestMosaiquePieceFile = function () {
+	let dialog = new UIComponent(),
+		self = this,
+		srcKey = this.srcKeys().mosaiqueSrc,
+		osrcKey = this.srcKeys().originalSrc;
+	dialog.component().className = 'MosaiqueComponent FileDialog';
+	let mosaiqueCsvFileInput = new FileInputArea(function (file) {
+		mosaiqueCsvFileInput.removeComponent();
+		let reader = new FileReader();
+		reader.onload = function () {
+			self.imageFileList(MC.CharacterSeparatedValues.parse(reader.result).filter(function (imageFile) {
+				return imageFile[srcKey] != "" && imageFile[osrcKey] != "";
+			}), function () {
+				dialog.removeComponent();
+			});
+			self.currentImageFile(self.imageFileList()[0]);
+		};
+		reader.readAsText(file);
+	}, 'mosaique piece csv file');
+	mosaiqueCsvFileInput.appendTo(dialog.component());
+	dialog.appendTo(this.component());
+};
+TransitOriginalMosaiqueComponent.prototype.requestFile = function () {
+	let dialog = new UIComponent(),
+		self = this,
+		srcKey = this.srcKeys().mosaiqueSrc,
+		osrcKey = this.srcKeys().originalSrc;
+	dialog.component().className = 'MosaiqueComponent FileDialog';
+	let mosaiqueCsvFileInput = new FileInputArea(function (file) {
+		mosaiqueCsvFileInput.removeComponent();
+		let reader = new FileReader();
+		reader.onload = function () {
+			self.imageFileList(MC.CharacterSeparatedValues.parse(reader.result).filter(function (imageFile) {
+				return imageFile[srcKey] != "" && imageFile[osrcKey] != "";
+			}), function () {
+				dialog.removeComponent();
+			});
+			self.currentImageFile(self.imageFileList()[0]);
+		};
+		reader.readAsText(file);
+	}, 'mosaique and original path csv file');
+	mosaiqueCsvFileInput.appendTo(dialog.component());
+	dialog.appendTo(this.component());
+};
+TransitOriginalMosaiqueComponent.prototype.defaultSrcKeys = {
+	originalSrc: 'osrc',
+	mosaiqueSrc: 'src'
+};
 TransitOriginalMosaiqueComponent.prototype.automaticTransit = function (aBoolean) {
 	if (aBoolean !== undefined) {
 		this._automaticTransit = aBoolean;
@@ -49,6 +97,7 @@ TransitOriginalMosaiqueComponent.prototype.stateDisplay = function (state) {
     }
     return this._stateDisplay;
 };
+
 TransitOriginalMosaiqueComponent.prototype.displayCanvas = function () {
 	if (!this._displayCanvas) {
 		this._displayCanvas = document.createElement('canvas');
@@ -89,10 +138,10 @@ TransitOriginalMosaiqueComponent.prototype.mouseupAction = function (event) {
 			y: (event.clientY - rect.top) / rect.height * pixelSize.height
 		};
 	let piece = this.selectMosaiquePieceAtPoint(point);
-	if (!piece) {
+	if (!piece || !piece[this.srcKeys().mosaiqueSrc]) {
 		return;
 	}
-	this.selectNext({src: piece.src});
+	this.selectNext(piece);
 };
 
 TransitOriginalMosaiqueComponent.prototype.displayOriginal = function () {
