@@ -134,6 +134,8 @@ If you have image files then write image-file-list.csv by 4 steps.
 3. Write piece-image-list.csv file.
 4. Write image-file-list.csv with 'original-image-list.csv' with 'piece-image-list.csv'.
 
+Or if use same image files for original image and mosaique piece images (like 5klogos.csv) then change srcKeys property of MosaiqueComponent. See [## Change srcKeys](## Change srcKeys).
+
 ### 1. Create piece images.
 
 Create piece images same name of original images into another folder of original images.  
@@ -167,6 +169,20 @@ When click piece of mosaique, draw clicked original image.
 When Alt-Key + click original image, back to previous mosaique image.  
 When Alt-Key + click mosaique image, back to it original image.
 
+
+## Change srcKeys
+
+1. Open mosaique-transit.html with text editor.
+2. Add a line like this:
+```
+		let mosaiqueComponent = new TransitOriginalMosaiqueComponent();
+		mosaiqueComponent.srcKeys({mosaiqueSrc: 'src', originalSrc: 'src'})
+		mosaiqueComponent.appendTo(document.body);
+		mosaiqueComponent.requestFile();
+```
+'src' is column name of your csv file.  
+mosaiqueSrc key represent image file path for mosaique piece images.  
+originalSrc key represent image file path for original images.
 
 
 ## Enable local file access to web browser.
