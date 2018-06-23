@@ -112,7 +112,7 @@ Select mosaique piece csv file -> wrote mosaique-pieces.csv file.
 
 ## Use mosaique-transit
 
-This program draw an original image that is selected from image-file-list.csv.  
+This program draw an original image that is first item of image-file-list.csv.  
 When click original image, draw mosaique image of clicked.  
 When click piece of mosaique, draw clicked original image.  
 When Alt-Key + click original image, back to previous mosaique image.  
