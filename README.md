@@ -12,8 +12,7 @@ Quick Start
 4. Move or copy an 'original image file' into mosaique-package folder.
 5. Move or copy 'mosaique piece image files folder' into mosaique-package folder.
 6. Write mosaique-pieces.csv file into mosaique-package folder.
-7. Enable local file access to web browser.
-8. Open original image file and mosaique-pieces.csv.
+7. Open original image file and mosaique-pieces.csv.
 	1. Select 'original image file'.
 	2. Select mosaique-pieces.csv file that was written at (6).
 	3. Original image and mosaique image are displayed on a web brower.
@@ -32,12 +31,19 @@ Quick Start
 unzip mosaique-package.zip
 
 mosaique-package/mosaique-selective.html
+mosaique-package/mosaique-transit.html
 mosaique-package/lib
 ```
 
+#### mosaique-selective.html
+This program draw an original image and a mosaique image side-by-side.  
+
+#### mosaique-transit.html
+This program draw an original image. When click it, draw a mosaique image. When click mosaique piece, draw clicked original image of a piece.  
+See [Use mosaique-transit](## Use mosaique-transit).
+
 
 ### 3. Open mosaique-package folder.
-
 
 `cd mosaique-package`
 
@@ -66,7 +72,104 @@ ls mosaiquePieceImageFilesFolder/* >> mosaique-pieces.csv
 ```
 
 
-### 7. Enable local file access to web browser.
+### 7. Open original image file and mosaique-pieces.csv.
+
+You need to enable local file access to web browser.  
+See [Enable local file access to web browser.](## Enable local file access to web browser.)
+
+	1. Select 'original image file'.
+	2. Select mosaique-pieces.csv file that was written at (6).
+	3. Original image and mosaique image are displayed on a web brower.
+
+
+Example
+=======
+
+### Draw mosaique from Mona Lisa with favicons.
+
+#### Download original image: Mona Lisa.  
+
+Download from [Mona Lisa - Wikipedia](https://en.wikipedia.org/wiki/Mona_Lisa) into mosaique-package folder.
+
+#### Download mosaique piece images: 5klogos.
+
+Download LLD-icon_sample.zip from [LLD - Large Logo Dataset](https://data.vision.ee.ethz.ch/sagea/lld/) into mosaique-package folder.  
+Unzip LLD-icon_sample.zip and created 5klogos folder.
+
+#### Write mosaique-pieces.csv file.
+
+```
+echo 'src' > mosaique-pieces.csv
+ls 5klogos/* >> mosaique-pieces.csv
+```
+
+#### Open mosaique-selective.html with web browser.
+
+Select original image file -> downloaded image file.  
+Select mosaique piece csv file -> wrote mosaique-pieces.csv file.
+
+
+
+## Use mosaique-transit
+
+This program draw an original image that is selected from image-file-list.csv.  
+When click original image, draw mosaique image of clicked.  
+When click piece of mosaique, draw clicked original image.  
+When Alt-Key + click original image, back to previous mosaique image.  
+When Alt-Key + click mosaique image, back to it original image.
+
+image-file-list.csv is pair list of original image file path and piece image file path.  
+Like this:
+
+```
+osrc,src
+/path/to/originalimage1,/path/to/pieceimage1
+/path/to/originalimage2,/path/to/pieceimage2
+```
+
+If you have image files then write image-file-list.csv by 4 steps.
+
+1. Create piece images.
+2. Write original-image-list.csv file.
+3. Write piece-image-list.csv file.
+4. Write image-file-list.csv with 'original-image-list.csv' with 'piece-image-list.csv'.
+
+### 1. Create piece images.
+
+Create piece images same name of original images into another folder of original images.  
+It's recommended to create PNG format small images about 64x64 scale.
+
+### 2. Write original-image-list.csv file.
+
+```
+echo osrc > original-image-list.csv
+ls /path/to/original-image-file-folder/* >> original-image-list.csv
+```
+
+### 3. Write piece-image-list.csv file.
+
+```
+echo src > piece-image-list.csv
+ls /path/to/piece-image-file-folder/* >> piece-image-list.csv
+```
+
+### 4. Write image-file-list.csv with 'original-image-list.csv' with 'piece-image-list.csv'.
+
+```
+piece original-image-list.csv piece-image-list.csv > image-file-list.csv
+```
+
+Open mosaique-transit.html and select written image-file-list.csv file.  
+Draw first item of image-file-list.csv.  
+
+When click original image, draw mosaique image of clicked.  
+When click piece of mosaique, draw clicked original image.  
+When Alt-Key + click original image, back to previous mosaique image.  
+When Alt-Key + click mosaique image, back to it original image.
+
+
+
+## Enable local file access to web browser.
 
 This program get image data from canvas to draw mosaique.  
 And run web browser with disabling Local File Restrictions option.
@@ -115,37 +218,3 @@ If you use Brackets then use Brackets Live Preview.
 	1. Open mosaique-package folder with Brackets.
 	2. Select mosaique-selective.html in File Tree area.
 	3. Check on 'Menu -> File -> Live Preview'.
-
-
-### 8. Open original image file and mosaique-pieces.csv.
-
-	1. Select 'original image file'.
-	2. Select mosaique-pieces.csv file that was written at (6).
-	3. Original image and mosaique image are displayed on a web brower.
-
-
-Example
-=======
-
-### Draw mosaique from Mona Lisa with favicons.
-
-#### Download original image: Mona Lisa.  
-
-Download from [Mona Lisa - Wikipedia](https://en.wikipedia.org/wiki/Mona_Lisa) into mosaique-package folder.
-
-#### Download mosaique piece images: 5klogos.
-
-Download LLD-icon_sample.zip from [LLD - Large Logo Dataset](https://data.vision.ee.ethz.ch/sagea/lld/) into mosaique-package folder.  
-Unzip LLD-icon_sample.zip and created 5klogos folder.
-
-#### Write mosaique-pieces.csv file.
-
-```
-echo 'src' > mosaique-pieces.csv
-ls 5klogos/* >> mosaique-pieces.csv
-```
-
-#### Open mosaique-selective.html with web browser.
-
-Select original image file -> downloaded image file.  
-Select mosaique piece csv file -> wrote mosaique-pieces.csv file.
