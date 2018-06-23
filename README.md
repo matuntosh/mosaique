@@ -40,7 +40,7 @@ This program draw an original image and a mosaique image side-by-side.
 
 #### mosaique-transit.html
 This program draw an original image. When click it, draw a mosaique image. When click mosaique piece, draw clicked original image of a piece.  
-See [Use mosaique-transit](#Use-mosaique-transit).
+See [Use mosaique-transit](#use-mosaique-transit).
 
 
 ### 3. Open mosaique-package folder.
@@ -75,7 +75,7 @@ ls mosaiquePieceImageFilesFolder/* >> mosaique-pieces.csv
 ### 7. Open original image file and mosaique-pieces.csv.
 
 You need to enable local file access to web browser.  
-See [Enable local file access to web browser.](#Enable-local-file-access-to-web-browser)
+See [Enable local file access to web browser.](#enable-local-file-access-to-web-browser)
 
 	1. Select 'original image file'.
 	2. Select mosaique-pieces.csv file that was written at (6).
@@ -134,7 +134,7 @@ If you have image files then write image-file-list.csv by 4 steps.
 3. Write piece-image-list.csv file.
 4. Write image-file-list.csv with 'original-image-list.csv' with 'piece-image-list.csv'.
 
-Or if use same image files for original image and mosaique piece images (like 5klogos.csv) then change srcKeys property of MosaiqueComponent. See [Change srcKeys](#Change-srcKeys).
+Or if use same image files for original image and mosaique piece images (like 5klogos.csv) then change srcKeys property of MosaiqueComponent. See [Change srcKeys](#change-srckeys).
 
 ### 1. Create piece images.
 
