@@ -388,31 +388,33 @@ MosaiqueComponent.prototype.standbyOriginalImageAndMosaiqueImage = function (rea
 		self = this;
 	this.loadImage(this.currentImageFile()[this.srcKeys().originalSrc], function (image) {
 		let time = new Date().getTime();
-        self.drawOriginal(image);
-        readyOriginalImageAction(startTime, time - startTime);
-        if (self.stateDraw() == self.stateDrawOriginal) {
-            self.stateDraw(self.stateCreateMosaique);
-        }
-        self.cursorWait();
-		setTimeout(function () {
-			if (self.currentImageFile() && self.currentImageFile().mosaiquePieces) {
-				self.mosaiquePieces(self.currentImageFile().mosaiquePieces);
-                self.stateDraw(self.stateDrawMosaique);
-				return;
-			} else {
-                if (self.stateDraw() == self.stateCreateMosaique) {
-					let result = self.createMosaique();
-					if (result) {
-						self.stateDraw(self.stateDrawMosaique);
-					}
-					return;
-                }
-			}
-			self.drawMosaique();
-			readyMosaiqueImageAction(startTime, new Date().getTime() - time);
-            self.cursorDefault();
-		}, 100);
+        if (self.stateDraw() != self.stateDrawMosaique) {
+			self.drawOriginal(image);
+			readyOriginalImageAction(startTime, time - startTime, function () {
+				self.standbyMosaiqueImage(time, readyMosaiqueImageAction);
+			});
+        } else {
+			self.standbyMosaiqueImage(time, readyMosaiqueImageAction);
+		}
 	});
+};
+MosaiqueComponent.prototype.standbyMosaiqueImage = function (startTime, readyMosaiqueImageAction) {
+	let self = this;
+	this.cursorWait();
+	setTimeout(function () {
+		if (self.currentImageFile() && self.currentImageFile().mosaiquePieces) {
+			self.mosaiquePieces(self.currentImageFile().mosaiquePieces);
+		} else {
+			if (self.stateDraw() != self.stateDrawMosaique) {
+				self.createMosaique();
+			}
+		}
+		self.drawMosaique();
+		readyMosaiqueImageAction(startTime, new Date().getTime() - startTime, function () {
+			self._stateDraw = self.stateDrawMosaique;
+		});
+		self.cursorDefault();
+	}, 100);
 };
 MosaiqueComponent.prototype.loadImagesFromFiles = function (list, finishedAction) {
 	let self = this,
@@ -669,7 +671,11 @@ MosaiqueComponent.prototype.draw = function () {
 	if (!this.currentImageFile()) {
 		return;
 	}
-	this.standbyOriginalImageAndMosaiqueImage(function (startTime, measureTime) {}, function (startTime, measureTime) {});
+	this.standbyOriginalImageAndMosaiqueImage(function (startTime, measureTime, endAction) {
+		endAction();
+	}, function (startTime, measureTime, endAction) {
+		endAction();
+	});
 };
 MosaiqueComponent.prototype.drawOriginal = function (image) {
 	let ctx = this.ctxForOriginal(),
