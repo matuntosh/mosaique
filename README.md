@@ -173,14 +173,17 @@ When Alt-Key + click mosaique image, back to it original image.
 ## Change srcKeys
 
 1. Open mosaique-transit.html with text editor.
-2. Add a line like this:
+2. Add 4 lines like this:
 ```
 		let mosaiqueComponent = new TransitOriginalMosaiqueComponent();
-		mosaiqueComponent.srcKeys({mosaiqueSrc: 'src', originalSrc: 'src'})
+		mosaiqueComponent.srcKeys({
+			mosaiqueSrc: 'src',
+			originalSrc: 'src'
+		})
 		mosaiqueComponent.appendTo(document.body);
 		mosaiqueComponent.requestFile();
 ```
-'src' is column name of your csv file.  
+'src' is column name of your image-file-list.csv.  
 mosaiqueSrc key represent image file path for mosaique piece images.  
 originalSrc key represent image file path for original images.
 
