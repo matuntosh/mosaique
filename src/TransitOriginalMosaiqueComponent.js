@@ -31,28 +31,6 @@ function TransitOriginalMosaiqueComponent () {
 }
 inherits(TransitOriginalMosaiqueComponent, MosaiqueComponent);
 
-TransitOriginalMosaiqueComponent.prototype.requestMosaiquePieceFile = function () {
-	let dialog = new UIComponent(),
-		self = this,
-		srcKey = this.srcKeys().mosaiqueSrc,
-		osrcKey = this.srcKeys().originalSrc;
-	dialog.component().className = 'MosaiqueComponent FileDialog';
-	let mosaiqueCsvFileInput = new FileInputArea(function (file) {
-		mosaiqueCsvFileInput.removeComponent();
-		let reader = new FileReader();
-		reader.onload = function () {
-			self.imageFileList(MC.CharacterSeparatedValues.parse(reader.result).filter(function (imageFile) {
-				return imageFile[srcKey] != "" && imageFile[osrcKey] != "";
-			}), function () {
-				dialog.removeComponent();
-			});
-			self.currentImageFile(self.imageFileList()[0]);
-		};
-		reader.readAsText(file);
-	}, 'mosaique piece csv file');
-	mosaiqueCsvFileInput.appendTo(dialog.component());
-	dialog.appendTo(this.component());
-};
 TransitOriginalMosaiqueComponent.prototype.requestFile = function () {
 	let dialog = new UIComponent(),
 		self = this,
@@ -63,12 +41,13 @@ TransitOriginalMosaiqueComponent.prototype.requestFile = function () {
 		mosaiqueCsvFileInput.removeComponent();
 		let reader = new FileReader();
 		reader.onload = function () {
-			self.imageFileList(MC.CharacterSeparatedValues.parse(reader.result).filter(function (imageFile) {
+			let imageFileList = MC.CharacterSeparatedValues.parse(reader.result).filter(function (imageFile) {
 				return imageFile[srcKey] != "" && imageFile[osrcKey] != "";
-			}), function () {
-				dialog.removeComponent();
 			});
-			self.currentImageFile(self.imageFileList()[0]);
+			self.imageFileList(imageFileList, function () {
+				dialog.removeComponent();
+				self.currentImageFile(imageFileList[0]);
+			});
 		};
 		reader.readAsText(file);
 	}, 'mosaique and original path csv file');
@@ -205,4 +184,14 @@ TransitOriginalMosaiqueComponent.prototype.backToPrevious = function () {
 		let file = this.displayHistory().pop();
 		this.currentImageFile(file);
 	}
+};
+
+TransitOriginalMosaiqueComponent.prototype.createSettingComponent = function () {
+	let c = MosaiqueComponent.prototype.createSettingComponent.call(this),
+		self = this,
+		automaticTransitSwitch = new SwitchComponent('automatic transit', this.automaticTransit(), function (s) {
+			self.automaticTransit(s.on());
+		});
+	automaticTransitSwitch.appendTo(c.component());
+	return c;
 };
