@@ -26,8 +26,9 @@ function TransitOriginalMosaiqueComponent () {
 	MosaiqueComponent.call(this);
 	this._displayCanvas = null;
 	this._displayHistory = [];
-	this._automaticTransit = false;
     this._stateDisplay = null;
+	this._automaticTransit = false;
+	this._transitDurationTime = 1000;
 }
 inherits(TransitOriginalMosaiqueComponent, MosaiqueComponent);
 
@@ -63,6 +64,12 @@ TransitOriginalMosaiqueComponent.prototype.automaticTransit = function (aBoolean
 		this._automaticTransit = aBoolean;
 	}
 	return this._automaticTransit;
+};
+TransitOriginalMosaiqueComponent.prototype.transitDurationTime = function (time) {
+	if (time !== undefined) {
+		this._transitDurationTime = time;
+	}
+	return this._transitDurationTime;
 };
 TransitOriginalMosaiqueComponent.prototype.stateDisplayOriginal = 'stateDisplayOriginal';
 TransitOriginalMosaiqueComponent.prototype.stateDisplayMosaique = 'stateDisplayMosaique';
@@ -123,33 +130,87 @@ TransitOriginalMosaiqueComponent.prototype.mouseupAction = function (event) {
 	this.selectNext(piece);
 };
 
-TransitOriginalMosaiqueComponent.prototype.displayOriginal = function () {
-	let original = this.canvasForOriginal(),
-		ctx = this.displayCanvas().getContext('2d');
+TransitOriginalMosaiqueComponent.prototype.displayOriginal = function (endAction) {
+	let original = this.canvasForOriginal();
+	if (this.transitDurationTime() > 0) {
+		this.transitImage(this.canvasForMosaique(), original, this.transitDurationTime(), endAction);
+		return;
+	}
+	let ctx = this.displayCanvas().getContext('2d');
 	ctx.clearRect(0, 0, original.width, original.height);
 	ctx.drawImage(original, 0, 0, original.width, original.height);
+	endAction();
 };
-TransitOriginalMosaiqueComponent.prototype.displayMosaique = function () {
-	let mosaique = this.canvasForMosaique(),
-		ctx = this.displayCanvas().getContext('2d');
+TransitOriginalMosaiqueComponent.prototype.displayMosaique = function (endAction) {
+	let mosaique = this.canvasForMosaique();
+	if (this.transitDurationTime() > 0) {
+		this.transitImage(this.canvasForOriginal(), mosaique, this.transitDurationTime(), endAction);
+		return;
+	}
+	let ctx = this.displayCanvas().getContext('2d');
 	ctx.drawImage(mosaique, 0, 0, mosaique.width, mosaique.height);
+	endAction();
+};
+TransitOriginalMosaiqueComponent.prototype.transitImage = function (fromImage, toImage, displayTime, endAction) {
+	let animationEasingFunction = 'linear',
+		ctx = this.displayCanvas().getContext('2d'),
+		self = this,
+		pixelSize = this.pixelSize();
+	return setTimeout(function () {
+		new Animation({
+			startTime: new Date().getTime(),
+			durationTime: displayTime,
+			fromGeometories: [1, 0],
+			toGeometories: [0, 1],
+			images: [fromImage, toImage],
+			deltaFunction: EasingFunctions[animationEasingFunction],
+			step: function (info) {
+				ctx.clearRect(0, 0, pixelSize.width, pixelSize.height);
+				info.fromGeometories.forEach(function (from, geometoryIndex) {
+					let to = info.toGeometories[geometoryIndex],
+						d = info.delta,
+						vector = to - from,
+						alpha = from + vector * d,
+						image = info.images[geometoryIndex];
+					ctx.save();
+					ctx.globalAlpha = alpha;
+					ctx.drawImage(image, 0, 0, image.width, image.height, 0, 0, pixelSize.width, pixelSize.height);
+//					self.stateDisplay(self.stateDisplayTransit);
+				});
+			},
+			stop: endAction
+		}).start();
+	}, 100);
 };
 TransitOriginalMosaiqueComponent.prototype.draw = function () {
 	if (!this.currentImageFile()) {
 		return;
 	}
 	let self = this;
-	this.standbyOriginalImageAndMosaiqueImage(function() {
+	this.standbyOriginalImageAndMosaiqueImage(function(startTime, measureTime, endAction) {
         if (self.stateDisplay() == self.stateDisplayOriginal) {
-            self.displayOriginal();
+            self.displayOriginal(endAction);
             if (self.automaticTransit()) {
-                self.stateDisplay(self.stateDisplayMosaique);
-                self.draw();
+				let waitTime = 6000,
+					delayTime = waitTime - measureTime;
+				if (delayTime <= 0) {
+					self.stateDisplay(self.stateDisplayMosaique);
+					self.draw();
+				} else {
+					setTimeout(function () {
+						self.stateDisplay(self.stateDisplayMosaique);
+						self.draw();
+					}, delayTime);
+				}
             }
-        }
-	}, function () {
+        } else {
+			endAction();
+		}
+	}, function (startTime, measureTime, endAction) {
 		if (self.stateDisplay() == self.stateDisplayMosaique) {
-			self.displayMosaique();
+			self.displayMosaique(endAction);
+		} else {
+			endAction();
 		}
 	});
 };
@@ -191,7 +252,13 @@ TransitOriginalMosaiqueComponent.prototype.createSettingComponent = function () 
 		self = this,
 		automaticTransitSwitch = new SwitchComponent('automatic transit', this.automaticTransit(), function (s) {
 			self.automaticTransit(s.on());
+		}),
+		transitDurationTimeInput = new InputNumberComponent('transit time', this.transitDurationTime(), 1, 'ms', function (num) {
+			return Math.max(0, parseFloat(num));
+		}, function () {
+			self.transitDurationTime(transitDurationTimeInput.value());
 		});
 	automaticTransitSwitch.appendTo(c.component());
+	transitDurationTimeInput.appendTo(c.component());
 	return c;
 };
