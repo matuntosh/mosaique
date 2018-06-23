@@ -147,6 +147,8 @@ It's recommended to create PNG format small images about 64x64 scale.
 echo osrc > original-image-list.csv
 ls /path/to/original-image-file-folder/* >> original-image-list.csv
 ```
+or have a lot of image files then:  
+`find /path/to/original-image-file-folder -type f -print0 | xargs -0 ls | sort -f >> original-image-list.csv`
 
 ### 3. Write piece-image-list.csv file.
 
@@ -154,11 +156,13 @@ ls /path/to/original-image-file-folder/* >> original-image-list.csv
 echo src > piece-image-list.csv
 ls /path/to/piece-image-file-folder/* >> piece-image-list.csv
 ```
+or have a lot of image files then:  
+`find /path/to/piece-image-file-folder -type f -print0 | xargs -0 ls | sort -f >> piece-image-list.csv`
 
 ### 4. Write image-file-list.csv with 'original-image-list.csv' with 'piece-image-list.csv'.
 
 ```
-piece original-image-list.csv piece-image-list.csv > image-file-list.csv
+paste -d , original-image-list.csv piece-image-list.csv > image-file-list.csv
 ```
 
 Open mosaique-transit.html and select written image-file-list.csv file.  
