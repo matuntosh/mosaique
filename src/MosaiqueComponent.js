@@ -53,6 +53,8 @@ function MosaiqueComponent() {
 	this._maximumDistanceComponent = null;
 
 	this._stateDraw = null;
+
+	this._settingComponent = null;
 }
 inherits(MosaiqueComponent, UIComponent);
 
@@ -78,14 +80,11 @@ MosaiqueComponent.prototype.loadFrom = function (originalImagePath, pieceCsvPath
 			action: function (text) {
 				WaitComponent.open('Loading images ...');
 				self.imageFileList(MC.CharacterSeparatedValues.parse(text).filter(function (imageFile) {
-					return imageFile[srcKey] != ""
-				}));
-				MediaFileLoader.instance().maxLoadingCount(1000);
-				self.loadImagesFromFiles(function () {
+					return imageFile[srcKey] != undefined && imageFile[srcKey] != ""
+				}), function () {
 					let currentFile = {};
 					currentFile[osrcKey] = originalImagePath;
 					self.currentImageFile(currentFile);
-					WaitComponent.close();
 				});
 			}
 		}
@@ -106,15 +105,15 @@ MosaiqueComponent.prototype.requestFiles = function () {
 			reader = new FileReader();
 		originalImage.onload = function () {
 			originalImageWasLoaded = true;
+			self._imageBySrc[originalImageSrc] = originalImage;
+			let currentFile = {};
+			currentFile[osrcKey] = originalImageSrc;
+			self.currentImageFile(currentFile);
 			if (originalImageWasLoaded && csvFileWasLoaded) {
 				dialog.removeComponent();
 			}
 		};
 		reader.onload = function () {
-			self._imageBySrc[originalImageSrc] = originalImage;
-			let currentFile = {};
-			currentFile[osrcKey] = originalImageSrc;
-			self.currentImageFile(currentFile);
 			originalImage.src = reader.result;
 		};
 		reader.readAsDataURL(file);
@@ -125,7 +124,7 @@ MosaiqueComponent.prototype.requestFiles = function () {
 		let reader = new FileReader();
 		reader.onload = function () {
 			self.imageFileList(MC.CharacterSeparatedValues.parse(reader.result).filter(function (imageFile) {
-				return imageFile[srcKey] != "";
+				return imageFile[srcKey] != undefined && imageFile[srcKey] != "";
 			}), function () {
 				csvFileWasLoaded = true;
 				if (originalImageWasLoaded && csvFileWasLoaded) {
@@ -166,10 +165,10 @@ MosaiqueComponent.prototype.currentImageFile = function (file) {
 };
 MosaiqueComponent.prototype.imageFileList = function (list, finishedAction) {
 	if (list) {
-		this._imageFileList = list;
 		WaitComponent.open('Loading images ...');
 		let self = this;
-		this.loadImagesFromFiles(function () {
+		this.loadImagesFromFiles(list, function () {
+			self._imageFileList = list;
 			self.stateDraw(self.stateDrawOriginal);
 			if (finishedAction) {
 				finishedAction();
@@ -210,13 +209,14 @@ MosaiqueComponent.prototype.createComponent = function () {
 
 	return c;
 };
-MosaiqueComponent.prototype.initializeComponent = function () {
-	UIComponent.prototype.initializeComponent.call(this);
-	window.addEventListener('keyup', function (evt) {
-		if (evt.ctrlKey && evt.key == ',') {
-			toggleSetting();
-		}
-	});
+
+MosaiqueComponent.prototype.settingComponent = function () {
+	if (!this._settingComponent) {
+		this._settingComponent = this.createSettingComponent();
+	}
+	return this._settingComponent;
+};
+MosaiqueComponent.prototype.createSettingComponent = function () {
 	var settingComponent = null,
 		dividesOfOriginal = null,
 		dividesOfMatching = null,
@@ -228,103 +228,107 @@ MosaiqueComponent.prototype.initializeComponent = function () {
 		thresholdDistanceInput = null,
 		self = this;
 
+	settingComponent = new UIComponent();
+	settingComponent.component().classList.add('setting');
+
+	dividesOfOriginal = new InputNumberComponent('divides/original', self.dividesOriginal(), 1, '', function (num) {
+		return Math.max(1, Math.min(1000, parseInt(num)));
+	}, function () {
+		self.dividesOriginal(dividesOfOriginal.value());
+	});
+	dividesOfOriginal.appendTo(settingComponent.component());
+
+	dividesOfMatching = new InputNumberComponent('divides/matching', self.divides(), 1, '', function (num) {
+		return Math.max(1, Math.min(8, parseInt(num)));
+	}, function () {
+		self.divides(dividesOfMatching.value());
+	});
+	dividesOfMatching.appendTo(settingComponent.component());
+
+	drawWithUniquePiecesSwitch = new SwitchComponent('unique pieces', self.drawWithUniquePieces(), function (s) {
+		self.drawWithUniquePieces(s.on());
+	});
+	drawWithUniquePiecesSwitch.appendTo(settingComponent.component());
+
+	findingOrderSwitch = new SwitchProfileComponent('finding order', {
+		LRTB: {
+			action: function () {
+				self.sortRects(self.sortRectsByLRTB);
+			}
+		},
+		grayscaleWB: {
+			action: function () {
+				self.sortRects(self.sortRectsByGrayscaleWhiteToBlack);
+			}
+		},
+		grayscaleBW: {
+			action: function () {
+				self.sortRects(self.sortRectsByGrayscaleBlackToWhite);
+			}
+		}
+	}, 2, function (profile) {
+		profile.action();
+	});
+	findingOrderSwitch.appendTo(settingComponent.component());
+
+	backgroundColorOriginalCanvasSwitch = new SwitchProfileComponent('background color of original image', {
+		white: {
+			color: 'white'
+		},
+		black: {
+			color: 'black'
+		}
+	}, self.backgroundColorOfOriginal() == 'white' ? 0 : 1, function (profile) {
+		self.backgroundColorOfOriginal(profile.color);
+	});
+	backgroundColorOriginalCanvasSwitch.appendTo(settingComponent.component());
+
+	cutOverflowingPiecesSwitch = new SwitchComponent('cut overflowing pieces', self.cutOverflowingPieces(), function (s) {
+		self.cutOverflowingPieces(s.on());
+	});
+	cutOverflowingPiecesSwitch.appendTo(settingComponent.component());
+
+	self.minimumDistanceComponent().appendTo(settingComponent.component());
+	self.maximumDistanceComponent().appendTo(settingComponent.component());
+	thresholdDistanceInput = new InputNumberComponent('threshold distance', self.thresholdDistance(), 1, '', function (num) {
+		return Math.max(0, parseFloat(num));
+	}, function () {
+		self.thresholdDistance(thresholdDistanceInput.value());
+	});
+	thresholdDistanceInput.appendTo(settingComponent.component());
+
+	backgroundOfMosaiqueSwitch = new SwitchProfileComponent('background of mosaique', {
+		white: {
+			name: 'backgroundWhite'
+		},
+		black: {
+			name: 'backgroundBlack'
+		},
+		originalImage: {
+			name: 'backgroundOriginal'
+		}
+	}, ['backgroundWhite', 'backgroundBlack', 'backgroundOriginal'].indexOf(self.backgroundOfMosaique()), function (profile) {
+		self.backgroundOfMosaique(profile.name);
+	});
+	backgroundOfMosaiqueSwitch.appendTo(settingComponent.component());
+
+	return settingComponent;
+};
+MosaiqueComponent.prototype.initializeComponent = function () {
+	UIComponent.prototype.initializeComponent.call(this);
+	window.addEventListener('keyup', function (evt) {
+		if (evt.ctrlKey && evt.key == ',') {
+			toggleSetting();
+		}
+	});
+
+	let self = this;
 	function toggleSetting() {
-		if (settingComponent) {
-			settingComponent.removeComponent();
-			settingComponent = null;
+		if (self.settingComponent().component().parentElement) {
+			self.settingComponent().removeComponent();
 		} else {
-			openSetting();
+			self.settingComponent().appendTo(self.component());
 		}
-	}
-
-	function openSetting() {
-		if (settingComponent) {
-			return;
-		}
-		settingComponent = new UIComponent();
-		settingComponent.component().classList.add('setting');
-		settingComponent.appendTo(self.component());
-
-		dividesOfOriginal = new InputNumberComponent('divides/original', self.dividesOriginal(), 1, '', function (num) {
-			return Math.max(1, Math.min(1000, parseInt(num)));
-		}, function () {
-			self.dividesOriginal(dividesOfOriginal.value());
-		});
-		dividesOfOriginal.appendTo(settingComponent.component());
-
-		let dividesOfMatching = new InputNumberComponent('divides/matching', self.divides(), 1, '', function (num) {
-			return Math.max(1, Math.min(8, parseInt(num)));
-		}, function () {
-			self.divides(dividesOfMatching.value());
-		});
-		dividesOfMatching.appendTo(settingComponent.component());
-
-		drawWithUniquePiecesSwitch = new SwitchComponent('unique pieces', self.drawWithUniquePieces(), function (s) {
-			self.drawWithUniquePieces(s.on());
-		});
-		drawWithUniquePiecesSwitch.appendTo(settingComponent.component());
-
-		findingOrderSwitch = new SwitchProfileComponent('finding order', {
-			LRTB: {
-				action: function () {
-					self.sortRects(self.sortRectsByLRTB);
-				}
-			},
-			grayscaleWB: {
-				action: function () {
-					self.sortRects(self.sortRectsByGrayscaleWhiteToBlack);
-				}
-			},
-			grayscaleBW: {
-				action: function () {
-					self.sortRects(self.sortRectsByGrayscaleBlackToWhite);
-				}
-			}
-		}, 2, function (profile) {
-			profile.action();
-		});
-		findingOrderSwitch.appendTo(settingComponent.component());
-
-		backgroundColorOriginalCanvasSwitch = new SwitchProfileComponent('background color of original image', {
-			white: {
-				color: 'white'
-			},
-			black: {
-				color: 'black'
-			}
-		}, self.backgroundColorOfOriginal() == 'white' ? 0 : 1, function (profile) {
-			self.backgroundColorOfOriginal(profile.color);
-		});
-		backgroundColorOriginalCanvasSwitch.appendTo(settingComponent.component());
-
-		cutOverflowingPiecesSwitch = new SwitchComponent('cut overflowing pieces', self.cutOverflowingPieces(), function (s) {
-			self.cutOverflowingPieces(s.on());
-		});
-		cutOverflowingPiecesSwitch.appendTo(settingComponent.component());
-
-		self.minimumDistanceComponent().appendTo(settingComponent.component());
-		self.maximumDistanceComponent().appendTo(settingComponent.component());
-		thresholdDistanceInput = new InputNumberComponent('threshold distance', self.thresholdDistance(), 1, '', function (num) {
-			return Math.max(0, parseFloat(num));
-		}, function () {
-			self.thresholdDistance(thresholdDistanceInput.value());
-		});
-		thresholdDistanceInput.appendTo(settingComponent.component());
-
-		backgroundOfMosaiqueSwitch = new SwitchProfileComponent('background of mosaique', {
-			white: {
-				name: 'backgroundWhite'
-			},
-			black: {
-				name: 'backgroundBlack'
-			},
-			originalImage: {
-				name: 'backgroundOriginal'
-			}
-		}, ['backgroundWhite', 'backgroundBlack', 'backgroundOriginal'].indexOf(self.backgroundOfMosaique()), function (profile) {
-			self.backgroundOfMosaique(profile.name);
-		});
-		backgroundOfMosaiqueSwitch.appendTo(settingComponent.component());
 	}
 };
 MosaiqueComponent.prototype.minimumDistanceComponent = function () {
@@ -393,31 +397,34 @@ MosaiqueComponent.prototype.standbyOriginalImageAndMosaiqueImage = function (rea
 		setTimeout(function () {
 			if (self.currentImageFile() && self.currentImageFile().mosaiquePieces) {
 				self.mosaiquePieces(self.currentImageFile().mosaiquePieces);
+                self.stateDraw(self.stateDrawMosaique);
+				return;
 			} else {
                 if (self.stateDraw() == self.stateCreateMosaique) {
-                    self.createMosaique();
+					let result = self.createMosaique();
+					if (result) {
+						self.stateDraw(self.stateDrawMosaique);
+					}
+					return;
                 }
 			}
-            if (self.stateDraw() == self.stateCreateMosaique) {
-                self.stateDraw(self.stateDrawMosaique);
-            }
 			self.drawMosaique();
 			readyMosaiqueImageAction(startTime, new Date().getTime() - time);
             self.cursorDefault();
 		}, 100);
 	});
 };
-MosaiqueComponent.prototype.loadImagesFromFiles = function (finishedAction) {
+MosaiqueComponent.prototype.loadImagesFromFiles = function (list, finishedAction) {
 	let self = this,
 		pieceSize = this.pieceSize(),
 		srcKey = this.srcKeys().mosaiqueSrc;
-	this.imageFileList().forEach(function (imageFile) {
+	list.forEach(function (imageFile) {
 		let image = self.newImage(),
 			src = imageFile[srcKey];
 		MediaFileLoader.instance().addMediaFile(src, 'image', function (image, url) {
 			meanColorsWithImage(image, url, pieceSize.width, pieceSize.height, self.divides());
 			self._loadedCount += 1;
-			WaitComponent.message('Loading images ... ' + self._loadedCount + '/' + (self.imageFileList().length));
+			WaitComponent.message('Loading images ... ' + self._loadedCount + '/' + (list.length));
 		}, image);
 		self._imageBySrc[src] = image;
 	});
@@ -465,6 +472,10 @@ MosaiqueComponent.prototype.mosaiquePieces = function (pieces) {
 	return this._mosaiquePieces;
 };
 MosaiqueComponent.prototype.createMosaique = function () {
+	if (!this.imageFileList()) {
+		return false;
+	}
+
 	let self = this,
 		srcKey = this.srcKeys().mosaiqueSrc,
 		osrcKey = this.srcKeys().originalSrc,
@@ -496,6 +507,8 @@ MosaiqueComponent.prototype.createMosaique = function () {
 
 		return piece;
 	}));
+
+	return true;
 };
 MosaiqueComponent.prototype.sortRects = function (action) {
 	if (action) {
