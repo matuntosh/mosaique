@@ -27,6 +27,7 @@ function TransitOriginalMosaiqueComponent () {
 	this._displayCanvas = null;
 	this._displayHistory = [];
     this._stateDisplay = null;
+	this._stateDirection = null;
 	this._automaticTransit = false;
 	this._transitDurationTime = 1000;
 }
@@ -83,6 +84,17 @@ TransitOriginalMosaiqueComponent.prototype.stateDisplay = function (state) {
     }
     return this._stateDisplay;
 };
+TransitOriginalMosaiqueComponent.prototype.stateDirectionForward = 'stateDirectionForward';
+TransitOriginalMosaiqueComponent.prototype.stateDirectionBackward = 'stateDirectionBackward';
+TransitOriginalMosaiqueComponent.prototype.stateDirection = function (state) {
+	if (state) {
+		this._stateDirection = state;
+	}
+	if (!this._stateDirection) {
+		this._stateDirection = this.stateDirectionForward;
+	}
+	return this._stateDirection;
+};
 
 TransitOriginalMosaiqueComponent.prototype.displayCanvas = function () {
 	if (!this._displayCanvas) {
@@ -112,11 +124,14 @@ TransitOriginalMosaiqueComponent.prototype.mouseupAction = function (event) {
 		this.backToPrevious();
 		return;
 	}
+
 	if (this.stateDisplay() == this.stateDisplayOriginal) {
         this.stateDisplay(this.stateDisplayMosaique);
+		this.stateDirection(this.stateDirectionForward);
         this.draw();
 		return;
 	}
+
 	let rect = this.displayCanvas().getBoundingClientRect(),
 		pixelSize = this.pixelSize(),
 		point = {
@@ -136,10 +151,7 @@ TransitOriginalMosaiqueComponent.prototype.displayOriginal = function (endAction
 		this.transitImage(this.canvasForMosaique(), original, this.transitDurationTime(), endAction);
 		return;
 	}
-	let ctx = this.displayCanvas().getContext('2d');
-	ctx.clearRect(0, 0, original.width, original.height);
-	ctx.drawImage(original, 0, 0, original.width, original.height);
-	endAction();
+	this.displayImageOnDisplay(original, endAction);
 };
 TransitOriginalMosaiqueComponent.prototype.displayMosaique = function (endAction) {
 	let mosaique = this.canvasForMosaique();
@@ -147,8 +159,12 @@ TransitOriginalMosaiqueComponent.prototype.displayMosaique = function (endAction
 		this.transitImage(this.canvasForOriginal(), mosaique, this.transitDurationTime(), endAction);
 		return;
 	}
+	this.displayImageOnDisplay(mosaique, endAction);
+};
+TransitOriginalMosaiqueComponent.prototype.displayImageOnDisplay = function (image, endAction) {
 	let ctx = this.displayCanvas().getContext('2d');
-	ctx.drawImage(mosaique, 0, 0, mosaique.width, mosaique.height);
+	ctx.clearRect(0, 0, image.width, image.height);
+	ctx.drawImage(image, 0, 0, image.width, image.height);
 	endAction();
 };
 TransitOriginalMosaiqueComponent.prototype.transitImage = function (fromImage, toImage, displayTime, endAction) {
@@ -231,17 +247,20 @@ TransitOriginalMosaiqueComponent.prototype.selectNext = function (file) {
 		this.displayHistory().push(this.currentImageFile());
 	}
     this.stateDisplay(this.stateDisplayOriginal);
+	this.stateDirection(this.stateDirectionForward);
 	this.currentImageFile(file);
 };
 TransitOriginalMosaiqueComponent.prototype.backToPrevious = function () {
 	if (this.stateDisplay() == this.stateDisplayMosaique) {
         this.stateDisplay(this.stateDisplayOriginal);
+		this.stateDirection(this.stateDirectionBackward);
 		this.currentImageFile(this.currentImageFile());
 	} else {
         if (this.displayHistory().length <= 0) {
             return;
         }
         this.stateDisplay(this.stateDisplayMosaique);
+		this.stateDirection(this.stateDirectionBackward);
 		let file = this.displayHistory().pop();
 		this.currentImageFile(file);
 	}
