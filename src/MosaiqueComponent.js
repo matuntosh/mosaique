@@ -26,6 +26,7 @@ function MosaiqueComponent() {
 	UIComponent.call(this);
 	this._pixelSize = null;
 	this._currentImageFile = null;
+	this._previousImageFile = null;
 	this._imageFileList = null;
 
 	this._canvasComponents = null;
@@ -158,10 +159,25 @@ MosaiqueComponent.prototype.pixelSize = function (size) {
 };
 MosaiqueComponent.prototype.currentImageFile = function (file) {
 	if (file) {
+		this.previousImageFile(this._currentImageFile);
 		this._currentImageFile = file;
 		this.stateDraw(this.stateDrawOriginal);
 	}
 	return this._currentImageFile;
+};
+MosaiqueComponent.prototype.previousImageFile = function (file) {
+	if (file) {
+		if (this._previousImageFile) {
+			this._previousImageFile.cachedImage = null;
+		}
+		this._previousImageFile = file;
+		if (this._previousImageFile) {
+			let image = new Image();
+			image.src = this.canvasForOriginal().toDataURL();
+			this._previousImageFile.cachedImage = image;
+		}
+	}
+	return this._previousImageFile;
 };
 MosaiqueComponent.prototype.imageFileList = function (list, finishedAction) {
 	if (list) {
