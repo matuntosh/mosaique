@@ -31,6 +31,8 @@ MosaiqueZoomComponent.prototype.cssClassName = function () {
 	return 'UIComponent MosaiqueComponent';
 };
 
+MosaiqueZoomComponent.prototype.stateDisplayZoomin = 'stateDisplayZoomin';
+MosaiqueZoomComponent.prototype.stateDisplayZoomout = 'stateDisplayZoomout';
 MosaiqueZoomComponent.prototype.zoomingTime = function (time) {
 	if (time != undefined) {
 		this._zoomingTime = time;
@@ -44,24 +46,38 @@ MosaiqueZoomComponent.prototype.displayOriginal = function (endAction) {
 		return;
 	}
 
+	let self = this,
+		changeStateDirectionNone = function () {
+			self.stateDirection(self.stateDirectionNone);
+			self.stateDisplay(self.stateDisplayOriginal);
+			endAction();
+		};
+
 	if (this.stateDirection() == this.stateDirectionForward) {
 		let pixelSize = this.pixelSize(),
 			fromRect = {x: 0, y: 0, width: pixelSize.width, height: pixelSize.height},
 			partRect = this.currentImageFile(),
 			toPartRect = fromRect,
 			toRect = scaleRectFromRectToRect(fromRect, partRect, toPartRect),
-			self = this,
 			images = [this.canvasForMosaique(), this.canvasForOriginal()],
 			froms = [fromRect, partRect],
 			tos = [toRect, toPartRect];
+		this.stateDisplay(this.stateDisplayZoomin);
 		this.zoom(images, froms, tos, function () {
-			self.displayImageOnDisplay(self.canvasForOriginal(), endAction);
+			self.displayImageOnDisplay(self.canvasForOriginal(), changeStateDirectionNone);
 		});
 	} else {
-		TransitOriginalMosaiqueComponent.prototype.displayOriginal.call(this, endAction);
+		TransitOriginalMosaiqueComponent.prototype.displayOriginal.call(this, changeStateDirectionNone);
 	}
 };
 MosaiqueZoomComponent.prototype.displayMosaique = function (endAction) {
+	let self = this,
+		changeStateDirectionNone = function () {
+			self.stateDirection(self.stateDirectionNone);
+			self.stateDisplay(self.stateDisplayMosaique);
+			endAction();
+		};
+
 	if (this.stateDirection() == this.stateDirectionBackward) {
 		let pixelSize = this.pixelSize(),
 			fromRect = {x: 0, y: 0, width: pixelSize.width, height: pixelSize.height},
@@ -73,12 +89,13 @@ MosaiqueZoomComponent.prototype.displayMosaique = function (endAction) {
 			images = [this.canvasForMosaique(), previousPiece.cachedImage],
 			froms = [toRect, toPartRect],
 			tos = [fromRect, partRect];
+		this.stateDisplay(this.stateDisplayZoomout);
 		this.zoom(images, froms, tos, function () {
-			self.displayImageOnDisplay(self.canvasForMosaique(), endAction);
+			self.displayImageOnDisplay(self.canvasForMosaique(), changeStateDirectionNone);
 			previousPiece.cachedImage = null;
 		});
 	} else {
-		TransitOriginalMosaiqueComponent.prototype.displayMosaique.call(this, endAction);
+		TransitOriginalMosaiqueComponent.prototype.displayMosaique.call(this, changeStateDirectionNone);
 	}
 };
 
