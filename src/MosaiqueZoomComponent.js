@@ -57,14 +57,12 @@ MosaiqueZoomComponent.prototype.displayOriginal = function (endAction) {
 		this.zoom(images, froms, tos, function () {
 			self.displayImageOnDisplay(self.canvasForOriginal(), endAction);
 		});
-	} else if (this.stateDirection() == this.stateDirectionBackward) {
+	} else {
 		TransitOriginalMosaiqueComponent.prototype.displayOriginal.call(this, endAction);
 	}
 };
 MosaiqueZoomComponent.prototype.displayMosaique = function (endAction) {
-	if (this.stateDirection() == this.stateDirectionForward) {
-		TransitOriginalMosaiqueComponent.prototype.displayMosaique.call(this, endAction);
-	} else if (this.stateDirection() == this.stateDirectionBackward) {
+	if (this.stateDirection() == this.stateDirectionBackward) {
 		let pixelSize = this.pixelSize(),
 			fromRect = {x: 0, y: 0, width: pixelSize.width, height: pixelSize.height},
 			previousPiece = this.previousImageFile(),
@@ -79,6 +77,8 @@ MosaiqueZoomComponent.prototype.displayMosaique = function (endAction) {
 			self.displayImageOnDisplay(self.canvasForMosaique(), endAction);
 			previousPiece.cachedImage = null;
 		});
+	} else {
+		TransitOriginalMosaiqueComponent.prototype.displayMosaique.call(this, endAction);
 	}
 };
 

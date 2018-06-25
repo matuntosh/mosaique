@@ -86,12 +86,13 @@ TransitOriginalMosaiqueComponent.prototype.stateDisplay = function (state) {
 };
 TransitOriginalMosaiqueComponent.prototype.stateDirectionForward = 'stateDirectionForward';
 TransitOriginalMosaiqueComponent.prototype.stateDirectionBackward = 'stateDirectionBackward';
+TransitOriginalMosaiqueComponent.prototype.stateDirectionNone = 'stateDirectionNone';
 TransitOriginalMosaiqueComponent.prototype.stateDirection = function (state) {
 	if (state) {
 		this._stateDirection = state;
 	}
 	if (!this._stateDirection) {
-		this._stateDirection = this.stateDirectionForward;
+		this._stateDirection = this.stateDirectionNone;
 	}
 	return this._stateDirection;
 };
@@ -146,20 +147,30 @@ TransitOriginalMosaiqueComponent.prototype.mouseupAction = function (event) {
 };
 
 TransitOriginalMosaiqueComponent.prototype.displayOriginal = function (endAction) {
-	let original = this.canvasForOriginal();
-	if (this.transitDurationTime() > 0) {
-		this.transitImage(this.canvasForMosaique(), original, this.transitDurationTime(), endAction);
+	let original = this.canvasForOriginal(),
+		self = this,
+		changeStateDirectionNone = function () {
+			self.stateDirection(self.stateDirectionNone);
+			endAction();
+		};
+	if (this.transitDurationTime() > 0 && this.stateDirection() != this.stateDirectionNone) {
+		this.transitImage(this.canvasForMosaique(), original, this.transitDurationTime(), changeStateDirectionNone);
 		return;
 	}
-	this.displayImageOnDisplay(original, endAction);
+	this.displayImageOnDisplay(original, changeStateDirectionNone);
 };
 TransitOriginalMosaiqueComponent.prototype.displayMosaique = function (endAction) {
-	let mosaique = this.canvasForMosaique();
-	if (this.transitDurationTime() > 0) {
-		this.transitImage(this.canvasForOriginal(), mosaique, this.transitDurationTime(), endAction);
+	let mosaique = this.canvasForMosaique(),
+		self = this,
+		changeStateDirectionNone = function () {
+			self.stateDirection(self.stateDirectionNone);
+			endAction();
+		};
+	if (this.transitDurationTime() > 0 && this.stateDirection() != this.stateDirectionNone) {
+		this.transitImage(this.canvasForOriginal(), mosaique, this.transitDurationTime(), changeStateDirectionNone);
 		return;
 	}
-	this.displayImageOnDisplay(mosaique, endAction);
+	this.displayImageOnDisplay(mosaique, changeStateDirectionNone);
 };
 TransitOriginalMosaiqueComponent.prototype.displayImageOnDisplay = function (image, endAction) {
 	let ctx = this.displayCanvas().getContext('2d');
