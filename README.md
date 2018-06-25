@@ -37,11 +37,13 @@ mosaique-package/lib
 
 #### mosaique-selective.html
 This program draw an original image and a mosaique image side-by-side.  
-
 #### mosaique-transit.html
 This program draw an original image. When click it, draw a mosaique image. When click mosaique piece, draw clicked original image of a piece.  
 See [Use mosaique-transit](#use-mosaique-transit).
 
+### mosaique-zoom.html
+This program draw an original image. When click it, draw as mosaique image. When click mosaique piece, zomm-in clicked piece and draw original image of clicked piece. When Alt-key + click original image, zoom-out to previous mosaique image. When Alt-key + click mosaique image, draw original image of mosaique image.  
+See [Use mosaique-zoom](#use-mosaique-zoom).
 
 ### 3. Open mosaique-package folder.
 
@@ -186,6 +188,24 @@ When Alt-Key + click mosaique image, back to it original image.
 'src' is column name of your image-file-list.csv.  
 mosaiqueSrc key represent image file path for mosaique piece images.  
 originalSrc key represent image file path for original images.
+
+
+## Use mosaique-zoom
+
+This program draw an original image that is first item of image-file-list.csv.  
+When click it, draw a mosaique image. When click mosaique piece, zomm-in clicked piece and draw original image of clicked piece.  
+When Alt-key + click original image, zoom-out to previous mosaique image.  
+When Alt-key + click mosaique image, draw original image of mosaique image.  
+
+1. Create piece images.
+2. Write original-image-list.csv file.
+3. Write piece-image-list.csv file.
+4. Write image-file-list.csv with 'original-image-list.csv' with 'piece-image-list.csv'.  
+
+This 4 steps is same as "Use mosaique-transit".  
+See [Use mosaique-transit](#use-mosaique-transit).  
+
+Open mosaique-zoom.html and select written image-file-list.csv file.  
 
 
 ## Enable local file access to web browser.
