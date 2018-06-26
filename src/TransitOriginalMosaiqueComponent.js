@@ -31,6 +31,8 @@ function TransitOriginalMosaiqueComponent () {
 	this._automaticTransit = false;
 	this._transitDurationTime = 1000;
 	this._animationTimeWeight = 1;
+
+	this._displayOriginalStartTime = null;
 }
 inherits(TransitOriginalMosaiqueComponent, MosaiqueComponent);
 
@@ -154,23 +156,38 @@ TransitOriginalMosaiqueComponent.prototype.displayOriginal = function (endAction
 		self = this,
 		changeStateDirectionNone = function () {
 			self.stateDirection(self.stateDirectionNone);
+            if (self.automaticTransit()) {
+				self.stateDisplay(self.stateDisplayMosaique);
+				self.stateDirection(self.stateDirectionForward);
+            }
 			endAction();
+			self._displayOriginalStartTime = new Date().getTime();
 		};
 	if (this.transitDurationTime() > 0 && this.stateDirection() != this.stateDirectionNone) {
 		this.transitImage(this.canvasForMosaique(), original, this.transitDurationTime() * this.animationTimeWeight(), changeStateDirectionNone);
 		return;
 	}
 	this.displayImageOnDisplay(original, changeStateDirectionNone);
+	this._displayOriginalStartTime = new Date().getTime();
 };
 TransitOriginalMosaiqueComponent.prototype.displayMosaique = function (endAction) {
 	let mosaique = this.canvasForMosaique(),
 		self = this,
+		measureTime = new Date().getTime() - this._displayOriginalStartTime,
 		changeStateDirectionNone = function () {
 			self.stateDirection(self.stateDirectionNone);
 			endAction();
 		};
 	if (this.transitDurationTime() > 0 && this.stateDirection() != this.stateDirectionNone) {
-		this.transitImage(this.canvasForOriginal(), mosaique, this.transitDurationTime() * this.animationTimeWeight(), changeStateDirectionNone);
+		let waitTime = 6000,
+			delayTime = waitTime - measureTime;
+		if (delayTime <= 0) {
+			this.transitImage(this.canvasForOriginal(), mosaique, this.transitDurationTime() * this.animationTimeWeight(), changeStateDirectionNone);
+		} else {
+			setTimeout(function () {
+				self.transitImage(self.canvasForOriginal(), mosaique, self.transitDurationTime() * self.animationTimeWeight(), changeStateDirectionNone);
+			}, delayTime);
+		}
 		return;
 	}
 	this.displayImageOnDisplay(mosaique, changeStateDirectionNone);
@@ -223,26 +240,13 @@ TransitOriginalMosaiqueComponent.prototype.draw = function () {
 		return;
 	}
 	let self = this;
-	this.standbyOriginalImageAndMosaiqueImage(function(startTime, measureTime, endAction) {
+	this.standbyOriginalImageAndMosaiqueImage(function(endAction) {
         if (self.stateDisplay() == self.stateDisplayOriginal) {
             self.displayOriginal(endAction);
-            if (self.automaticTransit()) {
-				let waitTime = 6000,
-					delayTime = waitTime - measureTime;
-				if (delayTime <= 0) {
-					self.stateDisplay(self.stateDisplayMosaique);
-					self.draw();
-				} else {
-					setTimeout(function () {
-						self.stateDisplay(self.stateDisplayMosaique);
-						self.draw();
-					}, delayTime);
-				}
-            }
         } else {
 			endAction();
 		}
-	}, function (startTime, measureTime, endAction) {
+	}, function (endAction) {
 		if (self.stateDisplay() == self.stateDisplayMosaique) {
 			self.displayMosaique(endAction);
 		} else {
