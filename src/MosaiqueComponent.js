@@ -125,7 +125,7 @@ MosaiqueComponent.prototype.requestFiles = function () {
 		let reader = new FileReader();
 		reader.onload = function () {
 			self.imageFileList(MC.CharacterSeparatedValues.parse(reader.result).filter(function (imageFile) {
-				return imageFile[srcKey] != undefined && imageFile[srcKey] != "";
+				return imageFile[srcKey] && imageFile[srcKey];
 			}), function () {
 				csvFileWasLoaded = true;
 				if (originalImageWasLoaded && csvFileWasLoaded) {
