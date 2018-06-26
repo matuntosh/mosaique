@@ -294,7 +294,7 @@ MosaiqueComponent.prototype.createSettingComponent = function () {
 		black: {
 			color: 'black'
 		}
-	}, self.backgroundColorOfOriginal() == 'white' ? 0 : 1, function (profile) {
+	}, this.backgroundColorOfOriginalOptions.indexOf(this.backgroundColorOfOriginal()), function (profile) {
 		self.backgroundColorOfOriginal(profile.color);
 	});
 	backgroundColorOriginalCanvasSwitch.appendTo(settingComponent.component());
@@ -323,10 +323,19 @@ MosaiqueComponent.prototype.createSettingComponent = function () {
 		originalImage: {
 			name: 'backgroundOriginal'
 		}
-	}, ['backgroundWhite', 'backgroundBlack', 'backgroundOriginal'].indexOf(self.backgroundOfMosaique()), function (profile) {
+	}, this.backgroundOfMosaiqueOptions.indexOf(self.backgroundOfMosaique()), function (profile) {
 		self.backgroundOfMosaique(profile.name);
 	});
 	backgroundOfMosaiqueSwitch.appendTo(settingComponent.component());
+
+	settingComponent.dividesOfOriginal = dividesOfOriginal;
+	settingComponent.dividesOfMatching = dividesOfMatching;
+	settingComponent.drawWithUniquePiecesSwitch = drawWithUniquePiecesSwitch;
+	settingComponent.findingOrderSwitch = findingOrderSwitch;
+	settingComponent.backgroundColorOriginalCanvasSwitch = backgroundColorOriginalCanvasSwitch;
+	settingComponent.cutOverflowingPiecesSwitch = cutOverflowingPiecesSwitch;
+	settingComponent.thresholdDistanceInput = thresholdDistanceInput;
+	settingComponent.backgroundOfMosaiqueSwitch = backgroundOfMosaiqueSwitch;
 
 	return settingComponent;
 };
@@ -399,6 +408,40 @@ MosaiqueComponent.prototype.ctxForMosaique = function () {
 	return this.canvasForMosaique().getContext('2d');
 };
 
+MosaiqueComponent.prototype.backgroundOfMosaiqueOptions = ['backgroundWhite', 'backgroundBlack', 'backgroundOriginal'];
+MosaiqueComponent.prototype.backgroundColorOfOriginalOptions = ['white', 'black'];
+MosaiqueComponent.prototype.updateMosaiqueOptions = function (options) {
+	if (this.backgroundOfMosaique() != options.backgroundOfMosaique) {
+		this._backgroundOfMosaique = options.backgroundOfMosaique;
+		let index = this.backgroundOfMosaiqueOptions.indexOf(this.backgroundOfMosaique());
+		this.settingComponent().backgroundOfMosaiqueSwitch.selectionIndex(index, this);
+	}
+	if (this.backgroundColorOfOriginal() != options.backgroundColorOfOriginal) {
+		this._backgroundColorOfOriginal = options.backgroundColorOfOriginal;
+		let index = this.backgroundColorOfOriginalOptions.indexOf(this.backgroundColorOfOriginal());
+		this.settingComponent().backgroundColorOriginalCanvasSwitch.selectionIndex(index, this);
+	}
+	if (this.drawWithUniquePieces() != options.drawWithUniquePieces) {
+		this._drawWithUniquePieces = options.drawWithUniquePieces;
+		this.settingComponent().drawWithUniquePiecesSwitch.on(this.drawWithUniquePieces(), this);
+	}
+	if (this.cutOverflowingPieces() != options.cutOverflowingPieces) {
+		this._cutOverflowingPieces = options.cutOverflowingPieces;
+		this.settingComponent().cutOverflowingPiecesSwitch.on(this.cutOverflowingPieces(), this);
+	}
+	if (this.thresholdDistance() != options.thresholdDistance) {
+		this._thresholdDistance = options.thresholdDistance;
+		this.settingComponent().thresholdDistanceInput.value(this.thresholdDistance(), this);
+	}
+	if (this.divides() != options.divides) {
+		this._divides = options.divides;
+		this.settingComponent().dividesOfMatching.value(this.divides(), this);
+	}
+	if (this.dividesOriginal() != options.dividesOriginal) {
+		this._dividesOriginal = options.dividesOriginal;
+		this.settingComponent().dividesOfOriginal.value(this.dividesOriginal(), this);
+	}
+};
 MosaiqueComponent.prototype.standbyOriginalImageAndMosaiqueImage = function (readyOriginalImageAction, readyMosaiqueImageAction) {
 	let startTime = new Date().getTime(),
 		self = this;
@@ -420,6 +463,9 @@ MosaiqueComponent.prototype.standbyMosaiqueImage = function (startTime, readyMos
 	setTimeout(function () {
 		if (self.currentImageFile() && self.currentImageFile().mosaiquePieces) {
 			self.mosaiquePieces(self.currentImageFile().mosaiquePieces);
+			if (self.currentImageFile().mosaiqueOptions) {
+				self.updateMosaiqueOptions(self.currentImageFile().mosaiqueOptions);
+			}
 		} else {
 			if (self.stateDraw() != self.stateDrawMosaique) {
 				self.createMosaique();
