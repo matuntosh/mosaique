@@ -282,6 +282,9 @@ TransitOriginalMosaiqueComponent.prototype.backToPrevious = function () {
         this.stateDisplay(this.stateDisplayMosaique);
 		this.stateDirection(this.stateDirectionBackward);
 		let file = this.displayHistory().pop();
+		if (file.mosaiqueOptions) {
+			this.updateMosaiqueOptions(file.mosaiqueOptions);
+		}
 		this.currentImageFile(file);
 	}
 };
