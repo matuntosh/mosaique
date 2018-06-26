@@ -62,9 +62,10 @@ MosaiqueZoomComponent.prototype.displayOriginal = function (endAction) {
 			toRect = scaleRectFromRectToRect(fromRect, partRect, toPartRect),
 			images = [this.canvasForMosaique(), this.canvasForOriginal()],
 			froms = [fromRect, partRect],
-			tos = [toRect, toPartRect];
+			tos = [toRect, toPartRect],
+			zoomTime = this.zoomingTime() * this.animationTimeWeight();
 		this.stateDisplay(this.stateDisplayZoomin);
-		this.zoom(images, froms, tos, function () {
+		this.zoom(images, froms, tos, zoomTime, function () {
 			self.displayImageOnDisplay(self.canvasForOriginal(), changeStateDirectionNone);
 		});
 	} else {
@@ -89,9 +90,10 @@ MosaiqueZoomComponent.prototype.displayMosaique = function (endAction) {
 			self = this,
 			images = [this.canvasForMosaique(), previousPiece.cachedImage],
 			froms = [toRect, toPartRect],
-			tos = [fromRect, partRect];
+			tos = [fromRect, partRect],
+			zoomTime = this.zoomingTime() * this.animationTimeWeight();
 		this.stateDisplay(this.stateDisplayZoomout);
-		this.zoom(images, froms, tos, function () {
+		this.zoom(images, froms, tos, zoomTime, function () {
 			self.displayImageOnDisplay(self.canvasForMosaique(), changeStateDirectionNone);
 			previousPiece.cachedImage = null;
 		});
@@ -100,14 +102,14 @@ MosaiqueZoomComponent.prototype.displayMosaique = function (endAction) {
 	}
 };
 
-MosaiqueZoomComponent.prototype.zoom = function (images, froms, tos, endAction) {
+MosaiqueZoomComponent.prototype.zoom = function (images, froms, tos, zoomTime, endAction) {
 	if (this._zoomAnimation) {
 		return;
 	}
 	let startTime = new Date().getTime(),
 		ctx = this.displayCanvas().getContext('2d'),
 		pixelSize = this.pixelSize(),
-		durationTime = this.zoomingTime(),
+		durationTime = zoomTime,
 		self = this,
 		animationInfo = {
 			startTime: startTime,
