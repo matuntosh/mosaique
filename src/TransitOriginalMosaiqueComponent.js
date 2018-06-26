@@ -44,7 +44,7 @@ TransitOriginalMosaiqueComponent.prototype.requestFile = function () {
 		let reader = new FileReader();
 		reader.onload = function () {
 			let imageFileList = MC.CharacterSeparatedValues.parse(reader.result).filter(function (imageFile) {
-				return imageFile[srcKey] != "" && imageFile[osrcKey] != "";
+				return imageFile[srcKey] && imageFile[osrcKey];
 			});
 			self.imageFileList(imageFileList, function () {
 				dialog.removeComponent();
@@ -205,7 +205,7 @@ TransitOriginalMosaiqueComponent.prototype.transitImage = function (fromImage, t
 //					self.stateDisplay(self.stateDisplayTransit);
 				});
 			},
-			stop: endAction
+			end: endAction
 		}).start();
 	}, 100);
 };
@@ -255,6 +255,15 @@ TransitOriginalMosaiqueComponent.prototype.selectMosaiquePieceAtPoint = function
 TransitOriginalMosaiqueComponent.prototype.selectNext = function (file) {
 	if (this.currentImageFile()) {
 		this.currentImageFile().mosaiquePieces = this.mosaiquePieces();
+		this.currentImageFile().mosaiqueOptions = {
+			backgroundOfMosaique: this.backgroundOfMosaique(),
+			backgroundColorOfOriginal: this.backgroundColorOfOriginal(),
+			drawWithUniquePieces: this.drawWithUniquePieces(),
+			cutOverflowingPieces: this.cutOverflowingPieces(),
+			thresholdDistance: this.thresholdDistance(),
+			divides: this.divides(),
+			dividesOriginal: this.dividesOriginal()
+		};
 		this.displayHistory().push(this.currentImageFile());
 	}
     this.stateDisplay(this.stateDisplayOriginal);
