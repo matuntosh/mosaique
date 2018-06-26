@@ -443,21 +443,19 @@ MosaiqueComponent.prototype.updateMosaiqueOptions = function (options) {
 	}
 };
 MosaiqueComponent.prototype.standbyOriginalImageAndMosaiqueImage = function (readyOriginalImageAction, readyMosaiqueImageAction) {
-	let startTime = new Date().getTime(),
-		self = this;
+	let self = this;
 	this.loadImage(this.currentImageFile()[this.srcKeys().originalSrc], function (image) {
-		let time = new Date().getTime();
         if (self.stateDraw() != self.stateDrawMosaique) {
 			self.drawOriginal(image);
-			readyOriginalImageAction(startTime, time - startTime, function () {
-				self.standbyMosaiqueImage(time, readyMosaiqueImageAction);
+			readyOriginalImageAction(function () {
+				self.standbyMosaiqueImage(readyMosaiqueImageAction);
 			});
         } else {
-			self.standbyMosaiqueImage(time, readyMosaiqueImageAction);
+			self.standbyMosaiqueImage(readyMosaiqueImageAction);
 		}
 	});
 };
-MosaiqueComponent.prototype.standbyMosaiqueImage = function (startTime, readyMosaiqueImageAction) {
+MosaiqueComponent.prototype.standbyMosaiqueImage = function (readyMosaiqueImageAction) {
 	let self = this;
 	this.cursorWait();
 	setTimeout(function () {
@@ -469,7 +467,7 @@ MosaiqueComponent.prototype.standbyMosaiqueImage = function (startTime, readyMos
 			}
 		}
 		self.drawMosaique();
-		readyMosaiqueImageAction(startTime, new Date().getTime() - startTime, function () {
+		readyMosaiqueImageAction(function () {
 			self._stateDraw = self.stateDrawMosaique;
 		});
 		self.cursorDefault();
@@ -730,9 +728,9 @@ MosaiqueComponent.prototype.draw = function () {
 	if (!this.currentImageFile()) {
 		return;
 	}
-	this.standbyOriginalImageAndMosaiqueImage(function (startTime, measureTime, endAction) {
+	this.standbyOriginalImageAndMosaiqueImage(function (endAction) {
 		endAction();
-	}, function (startTime, measureTime, endAction) {
+	}, function (endAction) {
 		endAction();
 	});
 };
