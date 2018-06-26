@@ -51,7 +51,12 @@ MosaiqueZoomComponent.prototype.displayOriginal = function (endAction) {
 		changeStateDirectionNone = function () {
 			self.stateDirection(self.stateDirectionNone);
 			self.stateDisplay(self.stateDisplayOriginal);
+            if (self.automaticTransit()) {
+				self.stateDisplay(self.stateDisplayMosaique);
+				self.stateDirection(self.stateDirectionForward);
+            }
 			endAction();
+			self._displayOriginalStartTime = new Date().getTime();
 		};
 
 	if (this.stateDirection() == this.stateDirectionForward) {
