@@ -463,9 +463,6 @@ MosaiqueComponent.prototype.standbyMosaiqueImage = function (startTime, readyMos
 	setTimeout(function () {
 		if (self.currentImageFile() && self.currentImageFile().mosaiquePieces) {
 			self.mosaiquePieces(self.currentImageFile().mosaiquePieces);
-			if (self.currentImageFile().mosaiqueOptions) {
-				self.updateMosaiqueOptions(self.currentImageFile().mosaiqueOptions);
-			}
 		} else {
 			if (self.stateDraw() != self.stateDrawMosaique) {
 				self.createMosaique();
