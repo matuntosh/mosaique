@@ -30,6 +30,7 @@ function TransitOriginalMosaiqueComponent () {
 	this._stateDirection = null;
 	this._automaticTransit = false;
 	this._transitDurationTime = 1000;
+	this._animationTimeWeight = 1;
 }
 inherits(TransitOriginalMosaiqueComponent, MosaiqueComponent);
 
@@ -126,6 +127,8 @@ TransitOriginalMosaiqueComponent.prototype.mouseupAction = function (event) {
 		return;
 	}
 
+	this.animationTimeWeight(event.shiftKey ? 10 : 1);
+
 	if (this.stateDisplay() == this.stateDisplayOriginal) {
         this.stateDisplay(this.stateDisplayMosaique);
 		this.stateDirection(this.stateDirectionForward);
@@ -154,7 +157,7 @@ TransitOriginalMosaiqueComponent.prototype.displayOriginal = function (endAction
 			endAction();
 		};
 	if (this.transitDurationTime() > 0 && this.stateDirection() != this.stateDirectionNone) {
-		this.transitImage(this.canvasForMosaique(), original, this.transitDurationTime(), changeStateDirectionNone);
+		this.transitImage(this.canvasForMosaique(), original, this.transitDurationTime() * this.animationTimeWeight(), changeStateDirectionNone);
 		return;
 	}
 	this.displayImageOnDisplay(original, changeStateDirectionNone);
@@ -167,7 +170,7 @@ TransitOriginalMosaiqueComponent.prototype.displayMosaique = function (endAction
 			endAction();
 		};
 	if (this.transitDurationTime() > 0 && this.stateDirection() != this.stateDirectionNone) {
-		this.transitImage(this.canvasForOriginal(), mosaique, this.transitDurationTime(), changeStateDirectionNone);
+		this.transitImage(this.canvasForOriginal(), mosaique, this.transitDurationTime() * this.animationTimeWeight(), changeStateDirectionNone);
 		return;
 	}
 	this.displayImageOnDisplay(mosaique, changeStateDirectionNone);
@@ -177,6 +180,12 @@ TransitOriginalMosaiqueComponent.prototype.displayImageOnDisplay = function (ima
 	ctx.clearRect(0, 0, image.width, image.height);
 	ctx.drawImage(image, 0, 0, image.width, image.height);
 	endAction();
+};
+TransitOriginalMosaiqueComponent.prototype.animationTimeWeight = function (weight) {
+	if (weight != undefined) {
+		this._animationTimeWeight = weight;
+	}
+	return this._animationTimeWeight;
 };
 TransitOriginalMosaiqueComponent.prototype.transitImage = function (fromImage, toImage, displayTime, endAction) {
 	let animationEasingFunction = 'linear',
