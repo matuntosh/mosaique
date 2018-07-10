@@ -27,12 +27,11 @@ function TransitOriginalMosaiqueComponent () {
 	this._displayCanvas = null;
 	this._displayHistory = [];
     this._stateDisplay = null;
-	this._stateDirection = null;
 	this._automaticTransit = false;
-	this._transitDurationTime = 1000;
-	this._animationTimeWeight = 1;
 
 	this._displayOriginalStartTime = null;
+
+	this._transitController = null;
 }
 inherits(TransitOriginalMosaiqueComponent, MosaiqueComponent);
 
@@ -69,12 +68,6 @@ TransitOriginalMosaiqueComponent.prototype.automaticTransit = function (aBoolean
 	}
 	return this._automaticTransit;
 };
-TransitOriginalMosaiqueComponent.prototype.transitDurationTime = function (time) {
-	if (time !== undefined) {
-		this._transitDurationTime = time;
-	}
-	return this._transitDurationTime;
-};
 TransitOriginalMosaiqueComponent.prototype.stateDisplayOriginal = 'stateDisplayOriginal';
 TransitOriginalMosaiqueComponent.prototype.stateDisplayMosaique = 'stateDisplayMosaique';
 TransitOriginalMosaiqueComponent.prototype.stateDisplayTransit = 'stateDisplayTransit';
@@ -87,29 +80,43 @@ TransitOriginalMosaiqueComponent.prototype.stateDisplay = function (state) {
     }
     return this._stateDisplay;
 };
-TransitOriginalMosaiqueComponent.prototype.stateDirectionForward = 'stateDirectionForward';
-TransitOriginalMosaiqueComponent.prototype.stateDirectionBackward = 'stateDirectionBackward';
-TransitOriginalMosaiqueComponent.prototype.stateDirectionNone = 'stateDirectionNone';
-TransitOriginalMosaiqueComponent.prototype.stateDirection = function (state) {
-	if (state) {
-		this._stateDirection = state;
-	}
-	if (!this._stateDirection) {
-		this._stateDirection = this.stateDirectionNone;
-	}
-	return this._stateDirection;
-};
 
 TransitOriginalMosaiqueComponent.prototype.displayCanvas = function () {
 	if (!this._displayCanvas) {
 		this._displayCanvas = document.createElement('canvas');
         this._displayCanvas.className = 'displayCanvas';
-		let self = this;
-        this._displayCanvas.addEventListener('mouseup', function (evt) {
-			self.mouseupAction(evt);
-		});
 	}
 	return this._displayCanvas;
+};
+TransitOriginalMosaiqueComponent.prototype.transitController = function () {
+	if (!this._transitController) {
+		let self = this;
+		this._transitController = new TransitController(
+			this.displayCanvas(),
+			function (event) {
+				if (self.stateDisplay() == self.stateDisplayOriginal) {
+					self.stateDisplay(self.stateDisplayMosaique);
+					self.draw();
+					return;
+				}
+				let rect = self.displayCanvas().getBoundingClientRect(),
+					pixelSize = self.pixelSize(),
+					point = {
+						x: (event.clientX - rect.left) / rect.width * pixelSize.width,
+						y: (event.clientY - rect.top) / rect.height * pixelSize.height
+					};
+				let piece = self.selectMosaiquePieceAtPoint(point);
+				if (!piece || !piece[self.srcKeys().mosaiqueSrc]) {
+					return;
+				}
+				self.selectNext(piece);
+			},
+			function (event) {
+				self.backToPrevious();
+			}
+		);
+	}
+	return this._transitController;
 };
 TransitOriginalMosaiqueComponent.prototype.displayHistory = function () {
 	return this._displayHistory;
@@ -121,50 +128,23 @@ TransitOriginalMosaiqueComponent.prototype.createComponent = function () {
 	this.canvasComponents().splice(1, 1);
 	this.canvasComponents()[0].addCanvas(this.canvasForMosaique());
 	this.canvasComponents()[0].addCanvas(this.displayCanvas());
+	this.transitController();
 	return MosaiqueComponent.prototype.createComponent.call(this);
-};
-TransitOriginalMosaiqueComponent.prototype.mouseupAction = function (event) {
-	if (event.altKey) {
-		this.backToPrevious();
-		return;
-	}
-
-	this.animationTimeWeight(event.shiftKey ? 10 : 1);
-
-	if (this.stateDisplay() == this.stateDisplayOriginal) {
-        this.stateDisplay(this.stateDisplayMosaique);
-		this.stateDirection(this.stateDirectionForward);
-        this.draw();
-		return;
-	}
-
-	let rect = this.displayCanvas().getBoundingClientRect(),
-		pixelSize = this.pixelSize(),
-		point = {
-			x: (event.clientX - rect.left) / rect.width * pixelSize.width,
-			y: (event.clientY - rect.top) / rect.height * pixelSize.height
-		};
-	let piece = this.selectMosaiquePieceAtPoint(point);
-	if (!piece || !piece[this.srcKeys().mosaiqueSrc]) {
-		return;
-	}
-	this.selectNext(piece);
 };
 
 TransitOriginalMosaiqueComponent.prototype.displayOriginal = function (endAction) {
 	let original = this.canvasForOriginal(),
 		self = this,
 		changeStateDirectionNone = function () {
-			self.stateDirection(self.stateDirectionNone);
             if (self.automaticTransit()) {
 				self.stateDisplay(self.stateDisplayMosaique);
-				self.stateDirection(self.stateDirectionForward);
+				self.transitController().stateDirection(self.transitController().stateDirectionForward);
             }
 			endAction();
 			self._displayOriginalStartTime = new Date().getTime();
 		};
-	if (this.transitDurationTime() > 0 && this.stateDirection() != this.stateDirectionNone) {
-		this.transitImage(this.canvasForMosaique(), original, this.transitDurationTime() * this.animationTimeWeight(), changeStateDirectionNone);
+	if (this.transitController().canTransit()) {
+		this.transitImage(this.canvasForMosaique(), original, changeStateDirectionNone);
 		return;
 	}
 	this.displayImageOnDisplay(original, changeStateDirectionNone);
@@ -175,17 +155,16 @@ TransitOriginalMosaiqueComponent.prototype.displayMosaique = function (endAction
 		self = this,
 		measureTime = new Date().getTime() - this._displayOriginalStartTime,
 		changeStateDirectionNone = function () {
-			self.stateDirection(self.stateDirectionNone);
 			endAction();
 		};
-	if (this.transitDurationTime() > 0 && this.stateDirection() != this.stateDirectionNone) {
+	if (this.transitController().canTransit()) {
 		let waitTime = 6000,
 			delayTime = waitTime - measureTime;
 		if (delayTime <= 0) {
-			this.transitImage(this.canvasForOriginal(), mosaique, this.transitDurationTime() * this.animationTimeWeight(), changeStateDirectionNone);
+			this.transitImage(this.canvasForOriginal(), mosaique, changeStateDirectionNone);
 		} else {
 			setTimeout(function () {
-				self.transitImage(self.canvasForOriginal(), mosaique, self.transitDurationTime() * self.animationTimeWeight(), changeStateDirectionNone);
+				self.transitImage(self.canvasForOriginal(), mosaique, changeStateDirectionNone);
 			}, delayTime);
 		}
 		return;
@@ -198,42 +177,27 @@ TransitOriginalMosaiqueComponent.prototype.displayImageOnDisplay = function (ima
 	ctx.drawImage(image, 0, 0, image.width, image.height);
 	endAction();
 };
-TransitOriginalMosaiqueComponent.prototype.animationTimeWeight = function (weight) {
-	if (weight != undefined) {
-		this._animationTimeWeight = weight;
-	}
-	return this._animationTimeWeight;
-};
-TransitOriginalMosaiqueComponent.prototype.transitImage = function (fromImage, toImage, displayTime, endAction) {
-	let animationEasingFunction = 'linear',
-		ctx = this.displayCanvas().getContext('2d'),
+TransitOriginalMosaiqueComponent.prototype.transitImage = function (fromImage, toImage, endAction) {
+	let ctx = this.displayCanvas().getContext('2d'),
 		self = this,
-		pixelSize = this.pixelSize();
-	return setTimeout(function () {
-		new Animation({
-			startTime: new Date().getTime(),
-			durationTime: displayTime,
-			fromGeometories: [1, 0],
-			toGeometories: [0, 1],
-			images: [fromImage, toImage],
-			deltaFunction: EasingFunctions[animationEasingFunction],
-			step: function (info) {
-				ctx.clearRect(0, 0, pixelSize.width, pixelSize.height);
-				info.fromGeometories.forEach(function (from, geometoryIndex) {
-					let to = info.toGeometories[geometoryIndex],
-						d = info.delta,
-						vector = to - from,
-						alpha = from + vector * d,
-						image = info.images[geometoryIndex];
-					ctx.save();
-					ctx.globalAlpha = alpha;
-					ctx.drawImage(image, 0, 0, image.width, image.height, 0, 0, pixelSize.width, pixelSize.height);
-//					self.stateDisplay(self.stateDisplayTransit);
-				});
-			},
-			end: endAction
-		}).start();
-	}, 100);
+		pixelSize = this.pixelSize(),
+		images = [fromImage, toImage];
+
+	this.transitController().transitAction = function (info) {
+		ctx.clearRect(0, 0, pixelSize.width, pixelSize.height);
+		info.fromGeometories.forEach(function (from, geometoryIndex) {
+			let to = info.toGeometories[geometoryIndex],
+				d = info.delta,
+				vector = to - from,
+				alpha = from + vector * d,
+				image = images[geometoryIndex];
+			ctx.save();
+			ctx.globalAlpha = alpha;
+			ctx.drawImage(image, 0, 0, image.width, image.height, 0, 0, pixelSize.width, pixelSize.height);
+		});
+	};
+	this.transitController().endAction= endAction;
+	this.transitController().transit();
 };
 TransitOriginalMosaiqueComponent.prototype.draw = function () {
 	if (!this.currentImageFile()) {
@@ -280,20 +244,17 @@ TransitOriginalMosaiqueComponent.prototype.selectNext = function (file) {
 		this.displayHistory().push(this.currentImageFile());
 	}
     this.stateDisplay(this.stateDisplayOriginal);
-	this.stateDirection(this.stateDirectionForward);
 	this.currentImageFile(file);
 };
 TransitOriginalMosaiqueComponent.prototype.backToPrevious = function () {
 	if (this.stateDisplay() == this.stateDisplayMosaique) {
         this.stateDisplay(this.stateDisplayOriginal);
-		this.stateDirection(this.stateDirectionBackward);
 		this.currentImageFile(this.currentImageFile());
 	} else {
         if (this.displayHistory().length <= 0) {
             return;
         }
         this.stateDisplay(this.stateDisplayMosaique);
-		this.stateDirection(this.stateDirectionBackward);
 		let file = this.displayHistory().pop();
 		if (file.mosaiqueOptions) {
 			this.updateMosaiqueOptions(file.mosaiqueOptions);
@@ -308,10 +269,10 @@ TransitOriginalMosaiqueComponent.prototype.createSettingComponent = function () 
 		automaticTransitSwitch = new SwitchComponent('automatic transit', this.automaticTransit(), function (s) {
 			self.automaticTransit(s.on());
 		}),
-		transitDurationTimeInput = new InputNumberComponent('transit time', this.transitDurationTime(), 1, 'ms', function (num) {
+		transitDurationTimeInput = new InputNumberComponent('transit time', this.transitController().transitDurationTime(), 1, 'ms', function (num) {
 			return Math.max(0, parseFloat(num));
 		}, function () {
-			self.transitDurationTime(transitDurationTimeInput.value());
+			self.transitController().transitDurationTime(transitDurationTimeInput.value());
 		});
 	automaticTransitSwitch.appendTo(c.component());
 	transitDurationTimeInput.appendTo(c.component());
