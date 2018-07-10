@@ -181,12 +181,14 @@ TransitOriginalMosaiqueComponent.prototype.transitImage = function (fromImage, t
 	let ctx = this.displayCanvas().getContext('2d'),
 		self = this,
 		pixelSize = this.pixelSize(),
+        froms = [1, 0],
+        tos = [0, 1],
 		images = [fromImage, toImage];
 
 	this.transitController().transitAction = function (info) {
 		ctx.clearRect(0, 0, pixelSize.width, pixelSize.height);
-		info.fromGeometories.forEach(function (from, geometoryIndex) {
-			let to = info.toGeometories[geometoryIndex],
+		froms.forEach(function (from, geometoryIndex) {
+			let to = tos[geometoryIndex],
 				d = info.delta,
 				vector = to - from,
 				alpha = from + vector * d,

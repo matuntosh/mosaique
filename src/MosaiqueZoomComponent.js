@@ -24,23 +24,61 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 function MosaiqueZoomComponent () {
 	TransitOriginalMosaiqueComponent.call(this);
-	this._zoomingTime = 1000;
-	this._zoomAnimation = null;
 }
 inherits(MosaiqueZoomComponent, TransitOriginalMosaiqueComponent);
 MosaiqueZoomComponent.prototype.cssClassName = function () {
 	return 'UIComponent MosaiqueComponent';
 };
-
-MosaiqueZoomComponent.prototype.stateDisplayZoomin = 'stateDisplayZoomin';
-MosaiqueZoomComponent.prototype.stateDisplayZoomout = 'stateDisplayZoomout';
-MosaiqueZoomComponent.prototype.zoomingTime = function (time) {
-	if (time != undefined) {
-		this._zoomingTime = time;
-	}
-	return this._zoomingTime;
+MosaiqueZoomComponent.prototype.zoomController = function () {
+	return this.transitController();
 };
-
+MosaiqueZoomComponent.prototype.transitController = function () {
+	if (!this._transitController) {
+		let self = this;
+		this._transitController = new ZoomController(
+			this.displayCanvas(),
+			function (event) {
+				if (self.stateDisplay() == self.stateDisplayOriginal) {
+					self.stateDisplay(self.stateDisplayMosaique);
+					self.draw();
+					return;
+				}
+				let rect = self.displayCanvas().getBoundingClientRect(),
+					pixelSize = self.pixelSize(),
+					point = {
+						x: (event.clientX - rect.left) / rect.width * pixelSize.width,
+						y: (event.clientY - rect.top) / rect.height * pixelSize.height
+					};
+				let piece = self.selectMosaiquePieceAtPoint(point);
+				if (!piece || !piece[self.srcKeys().mosaiqueSrc]) {
+					return;
+				}
+				self.selectNext(piece);
+			},
+			function (event) {
+				self.backToPrevious();
+			}
+		);
+		this._transitController.revertAction = function (info) {
+			self.revertZoom();
+		};
+	}
+	return this._transitController;
+};
+MosaiqueZoomComponent.prototype.revertZoom = function () {
+	if (this.zoomController().stateZoom() == this.zoomController().stateZoomin) {
+		let file = this.displayHistory().pop();
+		this.currentImageFile(file);
+		this.zoomController().stateDirection(this.zoomController().stateDirectionNone);
+		this.stateDisplay(this.stateDisplayMosaique);
+	} else if (this.zoomController().stateZoom() == this.zoomController().stateZoomout) {
+		this.displayHistory().push(this.currentImageFile());
+		this.currentImageFile(this.previousImageFile());
+		this.zoomController().stateDirection(this.zoomController().stateDirectionNone);
+		this.stateDisplay(this.stateDisplayOriginal);
+	}
+	this.draw();
+};
 MosaiqueZoomComponent.prototype.displayOriginal = function (endAction) {
 	if (this.displayHistory().length == 0) {
 		TransitOriginalMosaiqueComponent.prototype.displayOriginal.call(this, endAction);
@@ -49,17 +87,17 @@ MosaiqueZoomComponent.prototype.displayOriginal = function (endAction) {
 
 	let self = this,
 		changeStateDirectionNone = function () {
-			self.stateDirection(self.stateDirectionNone);
 			self.stateDisplay(self.stateDisplayOriginal);
             if (self.automaticTransit()) {
 				self.stateDisplay(self.stateDisplayMosaique);
-				self.stateDirection(self.stateDirectionForward);
+				self.zoomController().stateDirection(self.stateDirectionForward);
             }
 			endAction();
 			self._displayOriginalStartTime = new Date().getTime();
 		};
 
-	if (this.stateDirection() == this.stateDirectionForward) {
+	if (this.zoomController().stateDirection() == this.zoomController().stateDirectionForward) {
+		this.zoomController().animationTimeWeight(this.zoomController().animationTimeWeight());
 		let pixelSize = this.pixelSize(),
 			fromRect = {x: 0, y: 0, width: pixelSize.width, height: pixelSize.height},
 			partRect = this.currentImageFile(),
@@ -67,10 +105,8 @@ MosaiqueZoomComponent.prototype.displayOriginal = function (endAction) {
 			toRect = scaleRectFromRectToRect(fromRect, partRect, toPartRect),
 			images = [this.canvasForMosaique(), this.canvasForOriginal()],
 			froms = [fromRect, partRect],
-			tos = [toRect, toPartRect],
-			zoomTime = this.zoomingTime() * this.animationTimeWeight();
-		this.stateDisplay(this.stateDisplayZoomin);
-		this.zoom(images, froms, tos, zoomTime, function () {
+			tos = [toRect, toPartRect];
+		this.zoomin(images, froms, tos, function () {
 			self.displayImageOnDisplay(self.canvasForOriginal(), changeStateDirectionNone);
 		});
 	} else {
@@ -80,12 +116,11 @@ MosaiqueZoomComponent.prototype.displayOriginal = function (endAction) {
 MosaiqueZoomComponent.prototype.displayMosaique = function (endAction) {
 	let self = this,
 		changeStateDirectionNone = function () {
-			self.stateDirection(self.stateDirectionNone);
 			self.stateDisplay(self.stateDisplayMosaique);
 			endAction();
 		};
 
-	if (this.stateDirection() == this.stateDirectionBackward) {
+	if (this.zoomController().stateDirection() == this.zoomController().stateDirectionBackward) {
 		let pixelSize = this.pixelSize(),
 			fromRect = {x: 0, y: 0, width: pixelSize.width, height: pixelSize.height},
 			previousPiece = this.previousImageFile(),
@@ -95,10 +130,8 @@ MosaiqueZoomComponent.prototype.displayMosaique = function (endAction) {
 			self = this,
 			images = [this.canvasForMosaique(), previousPiece.cachedImage],
 			froms = [toRect, toPartRect],
-			tos = [fromRect, partRect],
-			zoomTime = this.zoomingTime() * this.animationTimeWeight();
-		this.stateDisplay(this.stateDisplayZoomout);
-		this.zoom(images, froms, tos, zoomTime, function () {
+			tos = [fromRect, partRect];
+		this.zoomout(images, froms, tos, function () {
 			self.displayImageOnDisplay(self.canvasForMosaique(), changeStateDirectionNone);
 			previousPiece.cachedImage = null;
 		});
@@ -107,98 +140,43 @@ MosaiqueZoomComponent.prototype.displayMosaique = function (endAction) {
 	}
 };
 
-MosaiqueZoomComponent.prototype.zoom = function (images, froms, tos, zoomTime, endAction) {
-	if (this._zoomAnimation) {
-		return;
-	}
-	let startTime = new Date().getTime(),
-		ctx = this.displayCanvas().getContext('2d'),
-		pixelSize = this.pixelSize(),
-		durationTime = zoomTime,
+MosaiqueZoomComponent.prototype.zoomin = function (images, froms, tos, endAction) {
+	this.zoomController().stateZoom(this.zoomController().stateZoomin);
+	this.zoom(images, froms, tos, endAction);
+};
+MosaiqueZoomComponent.prototype.zoomout = function (images, froms, tos, endAction) {
+	this.zoomController().stateZoom(this.zoomController().stateZoomout);
+	this.zoom(images, froms, tos, endAction);
+};
+MosaiqueZoomComponent.prototype.zoom = function (images, froms, tos, endAction) {
+	let ctx = this.displayCanvas().getContext('2d'),
 		self = this,
-		animationInfo = {
-			startTime: startTime,
-			durationTime: durationTime,
-			fromGeometories: froms,
-			toGeometories: tos,
-			images: images,
-			deltaFunction: EasingFunctions.linear,
-			step: function (info) {
-				ctx.clearRect(0, 0, pixelSize.width, pixelSize.height);
-				info.fromGeometories.forEach(function (from, geometoryIndex) {
-					let to = info.toGeometories[geometoryIndex],
-						d = info.delta,
-						vector = {x: to.x - from.x, y: to.y - from.y},
-						origin = {x: from.x + vector.x * d, y: from.y + vector.y * d},
-						width = (to.width - from.width) * d + from.width,
-						height = (to.height - from.height) * d + from.height,
-						image = info.images[geometoryIndex];
-					ctx.drawImage(image, 0, 0, image.width, image.height, Math.floor(origin.x), Math.floor(origin.y), Math.floor(width), Math.floor(height));
-				});
-			},
-			end: function (info) {
-				self._zoomAnimation = null;
-				endAction();
-			},
-			stop: function (info) {
-				self._zoomAnimation = null;
-			}
-		};
-	this._zoomAnimation = new Animation(animationInfo);
-	this._zoomAnimation.start();
-};
+		pixelSize = this.pixelSize();
 
-MosaiqueZoomComponent.prototype.mouseupAction = function (event) {
-	if (this._zoomAnimation) {
-		let info = this._zoomAnimation.info();
-		this._zoomAnimation.stop();
-		this.addWheelZoomAction(info);
-		return;
-	}
-	TransitOriginalMosaiqueComponent.prototype.mouseupAction.call(this, event);
-};
-MosaiqueZoomComponent.prototype.addWheelZoomAction = function (zoomingState) {
-	let self = this,
-		action = function (evt) {
-			evt.preventDefault();
-			let weight = evt.shiftKey ? 0.00001 : 0.001,
-				vector = self.stateDisplay() == self.stateDisplayZoomin ? 1 : -1,
-				mv = evt.deltaY * weight * vector,
-				value = mv + zoomingState.delta;
-			zoomingState.delta = Math.max(0, Math.min(1, value));
-			zoomingState.step(zoomingState);
-			if (zoomingState.delta == 1) {
-				zoomingState.end(zoomingState);
-				remove();
-			} else if (zoomingState.delta == 0) {
-				if (self.stateDisplay() == self.stateDisplayZoomin) {
-					let file = self.displayHistory().pop();
-					self.currentImageFile(file);
-					self.stateDirection(self.stateDirectionNone);
-					self.stateDisplay(self.stateDisplayMosaique);
-				} else if (self.stateDisplay() == self.stateDisplayZoomout) {
-					self.displayHistory().push(self.currentImageFile());
-					self.currentImageFile(self.previousImageFile());
-					self.stateDirection(self.stateDirectionNone);
-					self.stateDisplay(self.stateDisplayOriginal);
-				}
-				self.draw();
-				remove();
-			}
-		},
-		remove = function () {
-			self.displayCanvas().removeEventListener('wheel', action);
-		};
-	this.displayCanvas().addEventListener('wheel', action);
+	this.zoomController().transitAction = function (info) {
+		ctx.clearRect(0, 0, pixelSize.width, pixelSize.height);
+		froms.forEach(function (from, geometoryIndex) {
+			let to = tos[geometoryIndex],
+				d = info.delta,
+				vector = {x: to.x - from.x, y: to.y - from.y},
+				origin = {x: from.x + vector.x * d, y: from.y + vector.y * d},
+				width = (to.width - from.width) * d + from.width,
+				height = (to.height - from.height) * d + from.height,
+				image = images[geometoryIndex];
+			ctx.drawImage(image, 0, 0, image.width, image.height, Math.floor(origin.x), Math.floor(origin.y), Math.floor(width), Math.floor(height));
+		});
+	};
+	this.zoomController().endAction = endAction;
+	this.zoomController().zoom();
 };
 
 MosaiqueZoomComponent.prototype.createSettingComponent = function () {
 	let c = TransitOriginalMosaiqueComponent.prototype.createSettingComponent.call(this),
 		self = this,
-		zoomingTimeInput = new InputNumberComponent('zoom time', this.zoomingTime(), 1, 'ms', function (num) {
+		zoomingTimeInput = new InputNumberComponent('zoom time', this.zoomController().zoomingTime(), 1, 'ms', function (num) {
 			return Math.max(0, parseFloat(num));
 		}, function () {
-			self.zoomingTime(zoomingTimeInput.value());
+			self.zoomController().zoomingTime(zoomingTimeInput.value());
 		});
 	zoomingTimeInput.appendTo(c.component());
 	return c;
