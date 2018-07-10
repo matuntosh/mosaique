@@ -32,6 +32,7 @@ unzip mosaique-package.zip
 
 mosaique-package/mosaique-selective.html
 mosaique-package/mosaique-transit.html
+mosaique-package/mosaique-zoom.html
 mosaique-package/lib
 ```
 
@@ -40,8 +41,7 @@ This program draw an original image and a mosaique image side-by-side.
 #### mosaique-transit.html
 This program draw an original image. When click it, draw a mosaique image. When click mosaique piece, draw clicked original image of a piece.  
 See [Use mosaique-transit](#use-mosaique-transit).
-
-### mosaique-zoom.html
+#### mosaique-zoom.html
 This program draw an original image. When click it, draw as mosaique image. When click mosaique piece, zomm-in clicked piece and draw original image of clicked piece. When Alt-key + click original image, zoom-out to previous mosaique image. When Alt-key + click mosaique image, draw original image of mosaique image.  
 See [Use mosaique-zoom](#use-mosaique-zoom).
 
