@@ -27,7 +27,9 @@ function TransitOriginalMosaiqueComponent () {
 	this._displayCanvas = null;
 	this._displayHistory = [];
     this._stateDisplay = null;
+
 	this._automaticTransit = false;
+	this._automaticDelayTime = 6000;
 
 	this._displayOriginalStartTime = null;
 
@@ -67,6 +69,12 @@ TransitOriginalMosaiqueComponent.prototype.automaticTransit = function (aBoolean
 		this._automaticTransit = aBoolean;
 	}
 	return this._automaticTransit;
+};
+TransitOriginalMosaiqueComponent.prototype.automaticDelayTime = function (time) {
+	if (time !== undefined) {
+		this._automaticDelayTime = time;
+	}
+	return this._automaticDelayTime;
 };
 TransitOriginalMosaiqueComponent.prototype.stateDisplayOriginal = 'stateDisplayOriginal';
 TransitOriginalMosaiqueComponent.prototype.stateDisplayMosaique = 'stateDisplayMosaique';
@@ -158,7 +166,7 @@ TransitOriginalMosaiqueComponent.prototype.displayMosaique = function (endAction
 			endAction();
 		};
 	if (this.transitController().canTransit()) {
-		let waitTime = 6000,
+		let waitTime = this.automaticDelayTime(),
 			delayTime = waitTime - measureTime;
 		if (delayTime <= 0) {
 			this.transitImage(this.canvasForOriginal(), mosaique, changeStateDirectionNone);
@@ -226,10 +234,20 @@ TransitOriginalMosaiqueComponent.prototype.selectMosaiquePieceAtPoint = function
     for (var i = 0; i < this.mosaiquePieces().length; i += 1) {
         let piece = this.mosaiquePieces()[i];
         if (piece.x <= point.x && point.x <= piece.x + piece.width && piece.y <= point.y && point.y <= piece.y + piece.height) {
+			if (!piece.src) {
+				return null;
+			}
             return piece;
         }
     }
     return null;
+};
+TransitOriginalMosaiqueComponent.prototype.centerPiece = function () {
+	let p = {
+		x: this.pixelSize().width / 2,
+		y: this.pixelSize().height / 2
+	};
+	return this.selectMosaiquePieceAtPoint(p);
 };
 TransitOriginalMosaiqueComponent.prototype.selectNext = function (file) {
 	if (this.currentImageFile()) {
@@ -271,12 +289,18 @@ TransitOriginalMosaiqueComponent.prototype.createSettingComponent = function () 
 		automaticTransitSwitch = new SwitchComponent('automatic transit', this.automaticTransit(), function (s) {
 			self.automaticTransit(s.on());
 		}),
+		automaticDelayTimeInput = new InputNumberComponent('delay time/automatic transit', this.automaticDelayTime(), 1, 'ms', function (num) {
+			return Math.max(0, parseFloat(num));
+		}, function () {
+			self.automaticDelayTime(automaticDelayTimeInput.value());
+		}),
 		transitDurationTimeInput = new InputNumberComponent('transit time', this.transitController().transitDurationTime(), 1, 'ms', function (num) {
 			return Math.max(0, parseFloat(num));
 		}, function () {
 			self.transitController().transitDurationTime(transitDurationTimeInput.value());
 		});
 	automaticTransitSwitch.appendTo(c.component());
+	automaticDelayTimeInput.appendTo(c.component());
 	transitDurationTimeInput.appendTo(c.component());
 	return c;
 };
