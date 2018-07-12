@@ -24,10 +24,25 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 function MosaiqueZoomComponent () {
 	TransitOriginalMosaiqueComponent.call(this);
+
+	this._automaticZoom = false;
+	this._automaticZoomDelayTime = 6000;
 }
 inherits(MosaiqueZoomComponent, TransitOriginalMosaiqueComponent);
 MosaiqueZoomComponent.prototype.cssClassName = function () {
 	return 'UIComponent MosaiqueComponent';
+};
+MosaiqueZoomComponent.prototype.automaticZoom = function (aBoolean) {
+	if (aBoolean !== undefined) {
+		this._automaticZoom = aBoolean;
+	}
+	return this._automaticZoom;
+};
+MosaiqueZoomComponent.prototype.automaticZoomDelayTime = function (time) {
+	if (time !== undefined) {
+		this._automaticZoomDelayTime = time;
+	}
+	return this._automaticZoomDelayTime;
 };
 MosaiqueZoomComponent.prototype.zoomController = function () {
 	return this.transitController();
@@ -87,10 +102,9 @@ MosaiqueZoomComponent.prototype.displayOriginal = function (endAction) {
 
 	let self = this,
 		changeStateDirectionNone = function () {
-			self.stateDisplay(self.stateDisplayOriginal);
             if (self.automaticTransit()) {
 				self.stateDisplay(self.stateDisplayMosaique);
-				self.zoomController().stateDirection(self.stateDirectionForward);
+				self.zoomController().stateDirection(self.zoomController().stateDirectionForward);
             }
 			endAction();
 			self._displayOriginalStartTime = new Date().getTime();
@@ -105,7 +119,16 @@ MosaiqueZoomComponent.prototype.displayOriginal = function (endAction) {
 			toRect = scaleRectFromRectToRect(fromRect, partRect, toPartRect),
 			images = [this.canvasForMosaique(), this.canvasForOriginal()],
 			froms = [fromRect, partRect],
-			tos = [toRect, toPartRect];
+			tos = [toRect, toPartRect],
+			delayTime = this.automaticZoomDelayTime();
+		if (this.automaticZoom() && delayTime > 0) {
+			setTimeout(function () {
+				self.zoomin(images, froms, tos, function () {
+					self.displayImageOnDisplay(self.canvasForOriginal(), changeStateDirectionNone);
+				});
+			}, delayTime);
+			return;
+		}
 		this.zoomin(images, froms, tos, function () {
 			self.displayImageOnDisplay(self.canvasForOriginal(), changeStateDirectionNone);
 		});
@@ -116,8 +139,17 @@ MosaiqueZoomComponent.prototype.displayOriginal = function (endAction) {
 MosaiqueZoomComponent.prototype.displayMosaique = function (endAction) {
 	let self = this,
 		changeStateDirectionNone = function () {
-			self.stateDisplay(self.stateDisplayMosaique);
-			endAction();
+			if (self.automaticZoom()) {
+				endAction();
+				let next = self.centerPiece();
+				if (next) {
+					self.stateDisplay(self.stateDisplayOriginal);
+					self.zoomController().stateDirection(self.zoomController().stateDirectionForward);
+					self.selectNext(next);
+				}
+			} else {
+				endAction();
+			}
 		};
 
 	if (this.zoomController().stateDirection() == this.zoomController().stateDirectionBackward) {
@@ -177,7 +209,17 @@ MosaiqueZoomComponent.prototype.createSettingComponent = function () {
 			return Math.max(0, parseFloat(num));
 		}, function () {
 			self.zoomController().zoomingTime(zoomingTimeInput.value());
+		}),
+		automaticZoomSwitch = new SwitchComponent('automatic zoom', this.automaticZoom(), function (s) {
+			self.automaticZoom(s.on());
+		}),
+		automaticZoomDelayTimeInput = new InputNumberComponent('delay time/automatic zoom', this.automaticZoomDelayTime(), 1, 'ms', function (num) {
+			return Math.max(0, parseFloat(num));
+		}, function () {
+			self.automaticZoomDelayTime(automaticZoomDelayTimeInput.value());
 		});
+	automaticZoomSwitch.appendTo(c.component());
+	automaticZoomDelayTimeInput.appendTo(c.component());
 	zoomingTimeInput.appendTo(c.component());
 	return c;
 };
